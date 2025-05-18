@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'main_page.dart';
 import 'user_state.dart';
-import '../utils/permission_helper.dart'; // PermissionHelper 임포트
-import '../utils/dialog_helper.dart'; // DialogHelper 임포트
+import '../utils/permission_helper.dart';
+import '../utils/dialog_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,12 +25,25 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _signupConfirmPasswordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
+  @override
   void dispose() {
     _loginIdController.dispose();
     _loginPasswordController.dispose();
     _signupIdController.dispose();
     _signupPasswordController.dispose();
     _signupConfirmPasswordController.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     super.dispose();
   }
 
@@ -42,6 +56,19 @@ class _LoginPageState extends State<LoginPage> {
         _signupPasswordController.text.isNotEmpty &&
         _signupConfirmPasswordController.text.isNotEmpty &&
         _signupPasswordController.text == _signupConfirmPasswordController.text;
+  }
+
+  Future<void> _navigateToMainPage() async {
+    bool allPermissionsGranted = await PermissionHelper.checkPermissions();
+    if (!allPermissionsGranted) {
+      await PermissionHelper.requestPermissions(context);
+    }
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainPage()),
+      );
+    }
   }
 
   @override
@@ -176,21 +203,8 @@ class _LoginPageState extends State<LoginPage> {
             child: ElevatedButton(
               onPressed: _isLoginButtonEnabled
                   ? () async {
-                      print('Login button pressed');
                       Provider.of<UserState>(context, listen: false).login(_loginIdController.text);
-                      // 권한 확인 및 요청
-                      bool allPermissionsGranted = await PermissionHelper.checkPermissions();
-                      if (!allPermissionsGranted) {
-                        // 권한 요청을 하지만 결과와 상관없이 MainPage로 이동
-                        await PermissionHelper.requestPermissions(context);
-                      }
-                      // 권한 요청 결과와 상관없이 MainPage로 이동
-                      if (mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MainPage()),
-                        );
-                      }
+                      await _navigateToMainPage();
                     }
                   : null,
               style: ElevatedButton.styleFrom(
@@ -252,27 +266,8 @@ class _LoginPageState extends State<LoginPage> {
             },
             child: GestureDetector(
               onTap: () {
-                print('Later login button pressed');
-                try {
-                  Provider.of<UserState>(context, listen: false).logout();
-                  print('Logout successful');
-                  if (mounted) {
-                    print('Navigating to MainPage...');
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MainPage()),
-                    );
-                  } else {
-                    print('Widget is not mounted, skipping navigation.');
-                  }
-                } catch (e) {
-                  print('Error during later login: $e');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('페이지 이동 중 오류 발생: $e')),
-                    );
-                  }
-                }
+                Provider.of<UserState>(context, listen: false).logout();
+                _navigateToMainPage();
               },
               child: Text(
                 '나중에 로그인하기',

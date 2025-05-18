@@ -1,40 +1,20 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'main_page.dart';
 import 'recipe_page.dart';
-import 'login_page.dart';
-import 'user_state.dart';
-import '../utils/permission_helper.dart'; // PermissionHelper 임포트
 
-class UserPage extends StatefulWidget {
+// 앱 설명을 표시하는 페이지
+class UserPage extends StatelessWidget {
   const UserPage({super.key});
 
   @override
-  _UserPageState createState() => _UserPageState();
-}
-
-class _UserPageState extends State<UserPage> {
-  // 이미지 선택 처리
-  void _handleImageSelection() {
-    PermissionHelper.showImageSourceDialog(
-      context,
-      onImageSourceSelected: (source, permissionType) async {
-        XFile? image = await PermissionHelper.pickImage(context, source, onImagePicked: (pickedImage) {
-          if (pickedImage != null) {
-            Provider.of<UserState>(context, listen: false).setProfileImage(pickedImage.path);
-          }
-        });
-        if (image != null && mounted) {
-          Provider.of<UserState>(context, listen: false).setProfileImage(image.path);
-        }
-      },
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // 디바이스 방향을 세로로 고정
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     const double baseWidth = 1080;
@@ -42,53 +22,55 @@ class _UserPageState extends State<UserPage> {
     final widthRatio = screenWidth / baseWidth;
     final heightRatio = screenHeight / baseHeight;
 
-    return Consumer<UserState>(
-      builder: (context, userState, child) {
-        return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                // 상단바 (RecipePage와 동일)
-                Container(
-                  width: screenWidth,
-                  height: 60 * heightRatio,
-                  color: Colors.grey[800],
-                  child: Center(
-                    child: Text(
-                      'ㅁ',
-                      style: TextStyle(
-                        fontSize: 24 * widthRatio,
-                        color: Colors.white,
-                      ),
-                    ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5E9D6),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 상단바: 앱의 상단에 고정된 네비게이션 바
+            Container(
+              width: screenWidth,
+              height: 60 * heightRatio,
+              color: Colors.grey[800],
+              child: Center(
+                child: Text(
+                  'ㅁ',
+                  style: TextStyle(
+                    fontSize: 24 * widthRatio,
+                    color: Colors.white,
                   ),
                 ),
-                // 중단 섹션 (RecipePage와 동일)
-                Container(
-                  width: screenWidth,
-                  height: 600 * heightRatio,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/kimchiback.png'),
-                      fit: BoxFit.cover,
-                      opacity: 0.5,
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color.fromARGB(255, 255, 243, 223),
-                        Color.fromARGB(255, 189, 180, 165),
-                      ],
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 60 * widthRatio,
-                      top: 60 * heightRatio,
-                    ),
-                    child: Text(
-                      'Kimchida',
+              ),
+            ),
+            // 중단 섹션: 배경 이미지와 "About App" 텍스트 표시 영역
+            Container(
+              width: screenWidth,
+              height: 600 * heightRatio,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/kimchiback.png'),
+                  fit: BoxFit.cover,
+                  opacity: 0.5,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color.fromARGB(255, 255, 243, 223),
+                    Color.fromARGB(255, 189, 180, 165),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 60 * widthRatio,
+                  top: 60 * heightRatio,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'About App',
                       style: TextStyle(
                         fontSize: 90 * widthRatio,
                         fontWeight: FontWeight.bold,
@@ -102,178 +84,74 @@ class _UserPageState extends State<UserPage> {
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                // 하단 섹션
-                Expanded(
-                  child: Container(
-                    width: screenWidth,
-                    color: const Color(0xFFF5E9D6),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 60 * widthRatio),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 60 * heightRatio),
-                          // 프로필 사진 버튼과 사용자 정보
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // 프로필 사진 버튼 (좌측 맨 끝)
-                              GestureDetector(
-                                onTap: () {
-                                  if (userState.isLoggedIn) {
-                                    _handleImageSelection(); // 이미지 선택 처리
-                                  }
-                                },
-                                child: Container(
-                                  width: 200 * widthRatio,
-                                  height: 200 * widthRatio,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.grey[300],
-                                  ),
-                                  child: ClipOval(
-                                    child: userState.profileImagePath.startsWith('assets/images/')
-                                        ? Image.asset(
-                                            userState.profileImagePath,
-                                            width: 160 * widthRatio, // 200 * widthRatio * 0.8
-                                            height: 160 * widthRatio,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Image.file(
-                                            File(userState.profileImagePath),
-                                            width: 160 * widthRatio,
-                                            height: 160 * widthRatio,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Image.asset(
-                                                'assets/images/user.png',
-                                                width: 160 * widthRatio,
-                                                height: 160 * widthRatio,
-                                                fit: BoxFit.cover,
-                                              );
-                                            },
-                                          ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 20 * widthRatio), // 사진과 텍스트 사이 간격
-                              // 사용자 아이디 또는 로그인 필요 텍스트 (사진 중앙 우측)
-                              Expanded(
-                                child: Text(
-                                  userState.isLoggedIn ? userState.userId : '로그인이 필요합니다',
-                                  style: TextStyle(
-                                    fontSize: 36 * widthRatio * 2, // 72 * widthRatio
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ],
+              ),
+            ),
+            // 하단 섹션: 앱 설명 텍스트 표시
+            Expanded(
+              child: Container(
+                color: const Color(0xFFF5E9D6),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 60 * widthRatio,
+                      vertical: 60 * heightRatio,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 앱 설명 텍스트
+                        Text(
+                          'Kimchi App에 오신 것을 환영합니다!\n\n'
+                          '이 앱은 다양한 김치 레시피를 탐색하고, 직접 레시피를 만들어 볼 수 있는 공간입니다.\n\n'
+                          '- **레시피 탐색**: 다양한 김치 레시피를 확인하고 단계별로 따라할 수 있습니다.\n'
+                          '- **레시피 등록**: 사진 또는 텍스트로 나만의 레시피를 등록하고 만들어보실 수 있습니다..\n',
+                          style: TextStyle(
+                            fontSize: 40 * widthRatio,
+                            color: Colors.black,
                           ),
-                          SizedBox(height: 20 * heightRatio),
-                          // 구분선 (사용자 아이디 아래)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: 200 * widthRatio, // 프로필 사진 버튼의 오른쪽 끝에서 시작
-                              right: 10, // 하단 섹션 우측 끝에서 10포인트 띄움
-                            ),
-                            child: Container(
-                              height: 2 * heightRatio,
-                              color: Colors.black,
+                        ),
+                        SizedBox(height: 40 * heightRatio),
+                        // 메인페이지로 돌아가기 버튼
+                        Center(
+                          child: SizedBox(
+                            width: 300 * widthRatio,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                print('Navigating to MainPage from UserPage...');
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const MainPage()),
+                                  (Route<dynamic> route) => route.isFirst,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                '메인페이지로 돌아가기',
+                                style: TextStyle(
+                                  fontSize: 36 * widthRatio,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
-                          const Spacer(), // 하단으로 버튼 밀기
-                          // 로그인/로그아웃 버튼 (하단 섹션 너비의 중앙)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center, // 수평 중앙 정렬
-                            children: [
-                              SizedBox(
-                                width: 300 * widthRatio,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    if (userState.isLoggedIn) {
-                                      userState.logout();
-                                    }
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const LoginPage()),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: userState.isLoggedIn ? Colors.red : Colors.green,
-                                    padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    userState.isLoggedIn ? '로그아웃' : '로그인',
-                                    style: TextStyle(
-                                      fontSize: 36 * widthRatio,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 60 * heightRatio), // 하단 여백 유지
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          // 하단바 (RecipePage와 동일)
-          bottomNavigationBar: Container(
-            width: screenWidth,
-            height: 100 * heightRatio,
-            color: Colors.grey[200],
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MainPage()),
-                    );
-                  },
-                  icon: Image.asset(
-                    'assets/images/home.png',
-                    width: 60 * widthRatio,
-                    height: 60 * heightRatio,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const RecipePage()),
-                    );
-                  },
-                  icon: Image.asset(
-                    'assets/images/cabbage.png',
-                    width: 60 * widthRatio,
-                    height: 60 * heightRatio,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: Image.asset(
-                    'assets/images/user.png',
-                    width: 60 * widthRatio,
-                    height: 60 * heightRatio,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

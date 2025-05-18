@@ -4,18 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'user_page.dart';
-import 'recipe_page.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'main_page.dart';
-import '../utils/permission_helper.dart'; // PermissionHelper 임포트
+import 'recipe_page.dart';
+import 'user_page.dart';
+import '../utils/permission_helper.dart';
 
-// 레시피 세부 정보를 표시하는 StatefulWidget
 class RecipePageDetail extends StatefulWidget {
-  final List<Map<String, dynamic>> kimchiData; // 김치 데이터를 전달받는 변수
+  final List<Map<String, dynamic>> kimchiData;
+  final String recipeId;
 
   const RecipePageDetail({
     super.key,
     required this.kimchiData,
+    required this.recipeId,
   });
 
   @override
@@ -23,55 +27,81 @@ class RecipePageDetail extends StatefulWidget {
 }
 
 class _RecipePageDetailState extends State<RecipePageDetail> {
-  // 레시피 진행 상태 관리 변수
-  bool _isRecipeStarted = false; // 레시피가 시작되었는지 여부
-  int _currentStep = 0; // 현재 레시피 단계
-
-  // 스크롤 컨트롤러
+  bool _isRecipeStarted = false;
+  int _currentStep = 0;
   final ScrollController _scrollController = ScrollController();
-
-  // 이미지 캡처를 위한 키
   final GlobalKey _repaintBoundaryKey = GlobalKey();
-
-  // 캡처를 위한 플래그
   bool _isCapturing = false;
+  List<String>? _recipeSteps;
+  List<String?>? _stepImages;
+  String? _kimchiName;
+  String? _initialImagePath;
+  final Map<int, bool> _imageLoaded = {};
+  Orientation? _lastOrientation; // 마지막으로 감지된 방향 저장
 
-  // 레시피 데이터와 이미지 관리 변수
-  late List<String> _recipeSteps; // 레시피 단계별 설명 리스트
-  late List<String?> _stepImages; // 단계별 이미지 경로 리스트
-  late String _kimchiName; // 김치 이름
-  late String _initialImagePath; // 초기 화면에 표시할 이미지 경로
-  final Map<int, bool> _imageLoaded = {}; // 각 단계별 이미지 로딩 상태
-
-  // 위젯 초기화 시 실행되는 메서드
   @override
   void initState() {
     super.initState();
+    // 가로/세로 모드 모두 허용하도록 초기 설정
+    print('Initializing RecipePageDetail with all orientations allowed');
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]).then((_) {
+      // 방향 설정이 적용된 후 UI 갱신 보장
+      if (mounted) {
+        setState(() {});
+      }
+    });
 
-    // kimchiData에서 필요한 데이터를 추출하여 초기화
-    _kimchiName = widget.kimchiData[0]['name'] ?? '김치'; // 이름이 없으면 기본값
-    _recipeSteps = widget.kimchiData.map((step) => step['recipe_detail'] as String).toList();
-    _stepImages = widget.kimchiData.map((step) => step['recipe_image_serial_num'] as String?).toList();
-    // 초기 이미지가 없으면 기본 이미지(cabbagekimchi.png) 사용
-    _initialImagePath = _stepImages.firstWhere((image) => image != null && image.isNotEmpty, orElse: () => 'assets/images/cabbagekimchi.png')!;
+    // 김치 이름 초기화 (widget.kimchiData에서 가져옴)
+    _kimchiName = widget.kimchiData.isNotEmpty ? widget.kimchiData[0]['name']?.toString() ?? '김치' : '김치';
 
-    // 모든 단계의 이미지를 미리 로드
-    for (int i = 0; i < _recipeSteps.length && i < _stepImages.length; i++) {
-      _imageLoaded[i] = false;
-      _preloadImage(i);
+    // widget.kimchiData에서 레시피 데이터 초기화
+    if (widget.kimchiData.isNotEmpty) {
+      _recipeSteps = widget.kimchiData.map((step) {
+        String detail = step['recipe_detail']?.toString() ?? '레시피 단계 없음';
+        // "숫자." 패턴이 여러 번 반복된 경우 모두 제거 (예: "1.", "1. 1.", "1. 1. 1.")
+        return detail.replaceFirst(RegExp(r'(\d+\.\s*)+'), '').trim();
+      }).toList();
+      _stepImages = widget.kimchiData
+          .map((step) => step['recipe_image_serial_num']?.toString() ?? 'assets/images/photo.png')
+          .toList();
+      _initialImagePath = _stepImages!.firstWhere(
+        (image) => image != null && image.isNotEmpty,
+        orElse: () => 'assets/images/photo.png',
+      );
+
+      for (int i = 0; i < _recipeSteps!.length && i < _stepImages!.length; i++) {
+        _imageLoaded[i] = false;
+        _preloadImage(i);
+      }
+    } else {
+      _recipeSteps = ['레시피 데이터를 불러오지 못했습니다.'];
+      _stepImages = ['assets/images/photo.png'];
     }
+
+    print('Initialized _recipeSteps: $_recipeSteps');
+    print('Initialized _stepImages: $_stepImages');
+    print('Initialized _kimchiName: $_kimchiName');
   }
 
-  // 위젯이 폐기될 때 실행되는 메서드
   @override
   void dispose() {
     _scrollController.dispose();
+    // 페이지 종료 시 방향을 세로로 복원
+    print('Disposing RecipePageDetail, restoring portrait orientation');
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     super.dispose();
   }
 
-  // 이미지를 미리 로드하는 메서드
   void _preloadImage(int step) async {
-    if (step >= _stepImages.length || _stepImages[step] == null || _stepImages[step]!.isEmpty) {
+    if (_stepImages == null || step >= _stepImages!.length || _stepImages![step] == null || _stepImages![step]!.isEmpty) {
       setState(() {
         _imageLoaded[step] = true;
       });
@@ -79,7 +109,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
 
     try {
-      final imageProvider = AssetImage(_stepImages[step]!);
+      print('Preloading image for step $step: ${_stepImages![step]}');
+      final imageProvider = AssetImage(_stepImages![step]!);
       await precacheImage(imageProvider, context);
       setState(() {
         _imageLoaded[step] = true;
@@ -92,17 +123,21 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
   }
 
-  // 레시피를 시작하는 메서드
   void _startRecipe() {
+    print('Starting recipe...');
+    if (_recipeSteps == null || _recipeSteps!.isEmpty) {
+      print('Cannot start recipe: _recipeSteps is null or empty');
+      return;
+    }
     setState(() {
       _isRecipeStarted = true;
       _currentStep = 0;
     });
   }
 
-  // 이전 단계로 이동하는 메서드
   void _previousStep() {
     if (_currentStep > 0) {
+      print('Going to previous step: ${_currentStep - 1}');
       setState(() {
         _currentStep--;
       });
@@ -110,9 +145,9 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
   }
 
-  // 다음 단계로 이동하는 메서드
   void _nextStep() {
-    if (_currentStep < _recipeSteps.length - 1) {
+    if (_recipeSteps != null && _recipeSteps!.isNotEmpty && _currentStep < _recipeSteps!.length - 1) {
+      print('Going to next step: ${_currentStep + 1}');
       setState(() {
         _currentStep++;
       });
@@ -120,8 +155,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
   }
 
-  // 전체 레시피 이미지를 캡처하고 저장하는 메서드
   Future<void> _captureRecipeImage() async {
+    print('Capturing recipe image...');
     bool allPermissionsGranted = await PermissionHelper.checkPermissions();
     if (!allPermissionsGranted) {
       await PermissionHelper.requestPermissions(
@@ -133,12 +168,10 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
       return;
     }
 
-    // 캡처 플래그 활성화
     setState(() {
       _isCapturing = true;
     });
 
-    // 렌더링이 완료될 때까지 대기
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _captureAndSaveImage();
       setState(() {
@@ -149,16 +182,15 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
 
   Future<void> _captureAndSaveImage() async {
     try {
+      print('Saving recipe image to gallery...');
       final RenderRepaintBoundary boundary = _repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final pngBytes = byteData!.buffer.asUint8List();
 
-      // 임시 디렉토리에 이미지 저장
       final tempDir = await getTemporaryDirectory();
       final file = await File('${tempDir.path}/recipe_${DateTime.now().millisecondsSinceEpoch}.png').writeAsBytes(pngBytes);
 
-      // 갤러리에 저장
       final result = await ImageGallerySaverPlus.saveFile(file.path);
       if (result['isSuccess']) {
         if (mounted) {
@@ -183,9 +215,28 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
   }
 
-  // UI를 빌드하는 메서드
+  // 방향 변경 시 해당 방향으로 고정하는 메서드
+  Future<void> _lockOrientation(Orientation orientation) async {
+    if (_lastOrientation != orientation) {
+      print('Locking orientation to: $orientation');
+      _lastOrientation = orientation;
+      if (orientation == Orientation.portrait) {
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+        ]);
+      } else {
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('Building RecipePageDetail...');
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     const double baseWidth = 1080;
@@ -199,112 +250,58 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
           children: [
             OrientationBuilder(
               builder: (context, orientation) {
-                if (orientation == Orientation.portrait) {
-                  // 세로 모드 UI
-                  return Column(
-                    children: [
-                      // 상단바: 앱 이름 표시
-                      Container(
-                        width: screenWidth,
-                        height: 60 * heightRatio,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            'ㅁ',
-                            style: TextStyle(
-                              fontSize: 24 * widthRatio,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // 하단 섹션: 레시피 시작 전/후 화면 표시
-                      Expanded(
-                        child: Container(
-                          color: const Color(0xFFF5E9D6),
-                          child: _isRecipeStarted ? _buildRecipeStepsPortrait() : _buildInitialViewPortrait(),
-                        ),
-                      ),
-                      // 하단 내비게이션 바 (세로 모드)
-                      _buildBottomNavigationBarPortrait(widthRatio, heightRatio),
-                    ],
-                  );
-                } else {
-                  // 가로 모드 UI
-                  return Row(
-                    children: [
-                      // 상단바: 화면 왼쪽 끝에 세로로 표시
-                      RotatedBox(
-                        quarterTurns: 3,
-                        child: Container(
-                          width: screenHeight,
-                          height: 180 * heightRatio,
-                          color: Colors.grey[800],
-                          child: Center(
-                            child: Text(
-                              'ㅁ',
-                              style: TextStyle(
-                                fontSize: 24 * widthRatio,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      // 하단 섹션: 레시피 시작 전/후 화면 표시
-                      Expanded(
-                        child: Container(
-                          color: const Color(0xFFF5E9D6),
-                          child: _isRecipeStarted ? _buildRecipeStepsLandscape() : _buildInitialViewPortrait(),
-                        ),
-                      ),
-                      // 하단 내비게이션 바 (가로 모드)
-                      RotatedBox(
-                        quarterTurns: 1,
-                        child: _buildBottomNavigationBarLandscape(widthRatio, heightRatio),
-                      ),
-                    ],
-                  );
-                }
+                print('Orientation changed to: $orientation');
+                // 방향 변경 시 해당 방향으로 고정
+                _lockOrientation(orientation);
+
+                // 세로/가로 모드에 따라 적절한 UI 렌더링
+                return orientation == Orientation.portrait
+                    ? _buildPortraitLayout(widthRatio, heightRatio, screenWidth)
+                    : _buildLandscapeLayout(widthRatio, heightRatio, screenWidth, screenHeight);
               },
             ),
-            // 캡처를 위한 위젯 (화면에 보이지 않도록 위치 조정)
             Positioned(
-              left: -9999, // 화면 밖으로 이동
+              left: -9999,
               child: Visibility(
-                visible: _isCapturing, // 캡처 중일 때만 렌더링
+                visible: _isCapturing,
                 child: RepaintBoundary(
                   key: _repaintBoundaryKey,
                   child: Container(
                     color: Colors.white,
-                    child: Column(
-                      children: List.generate(_recipeSteps.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              // 단계별 텍스트
-                              Text(
-                                '${index + 1}. ${_recipeSteps[index]}',
-                                style: const TextStyle(fontSize: 16),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 10),
-                              // 단계별 이미지
-                              _stepImages[index] != null && _stepImages[index]!.isNotEmpty
-                                  ? Image.asset(
-                                      _stepImages[index]!,
-                                      width: 300,
-                                      height: 200,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) => const Text('이미지 없음'),
-                                    )
-                                  : const Text('이미지 없음'),
-                            ],
-                          ),
-                        );
-                      }),
-                    ),
+                    child: _recipeSteps != null && _recipeSteps!.isNotEmpty
+                        ? Column(
+                            children: List.generate(_recipeSteps!.length, (index) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${index + 1}. ${_recipeSteps![index]}',
+                                      style: const TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _stepImages != null &&
+                                            index < _stepImages!.length &&
+                                            _stepImages![index] != null &&
+                                            _stepImages![index]!.isNotEmpty
+                                        ? Image.asset(
+                                            _stepImages![index]!,
+                                            width: 300,
+                                            height: 200,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              print('Error loading capture image for step $index: $error');
+                                              return const Text('이미지 없음');
+                                            },
+                                          )
+                                        : const Text('이미지 없음'),
+                                  ],
+                                ),
+                              );
+                            }),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -315,34 +312,95 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 세로 모드: 레시피 시작 전 화면 UI
+  // 세로 모드 UI를 렌더링하는 메서드
+  Widget _buildPortraitLayout(double widthRatio, double heightRatio, double screenWidth) {
+    print('Rendering portrait layout...');
+    return Column(
+      children: [
+        // 상단바: 앱의 상단에 표시되는 네비게이션 바
+        Container(
+          width: screenWidth,
+          height: 60 * heightRatio,
+          color: Colors.grey[800],
+          child: Center(
+            child: Text(
+              'ㅁ',
+              style: TextStyle(
+                fontSize: 24 * widthRatio,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        // 메인 콘텐츠: 초기 화면 또는 레시피 단계 화면 표시
+        Expanded(
+          child: Container(
+            color: const Color(0xFFF5E9D6),
+            child: _isRecipeStarted ? _buildRecipeStepsPortrait() : _buildInitialViewPortrait(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 가로 모드 UI를 렌더링하는 메서드
+  Widget _buildLandscapeLayout(double widthRatio, double heightRatio, double screenWidth, double screenHeight) {
+    print('Rendering landscape layout...');
+    return SingleChildScrollView(
+      child: Row(
+        children: [
+          // 상단바: 가로 모드에서 회전된 상태로 표시
+          RotatedBox(
+            quarterTurns: 3,
+            child: Container(
+              width: screenHeight,
+              height: 180 * heightRatio,
+              color: Colors.grey[800],
+              child: Center(
+                child: Text(
+                  'ㅁ',
+                  style: TextStyle(
+                    fontSize: 24 * widthRatio,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 메인 콘텐츠: 초기 화면 또는 레시피 단계 화면 표시
+          Expanded(
+            child: Container(
+              color: const Color(0xFFF5E9D6),
+              child: _isRecipeStarted ? _buildRecipeStepsLandscape() : _buildInitialViewPortrait(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 세로 모드에서 초기 화면(김치 이름과 설명)을 렌더링
   Widget _buildInitialViewPortrait() {
+    print('Building initial view (portrait)...');
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 뒤로가기 버튼: 이전 페이지로 이동
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.pop(context);
+              print('Navigating back to MainPage...');
+              Navigator.popUntil(context, (route) => route.isFirst);
             },
           ),
           const SizedBox(height: 10),
-          // 김치 이름 표시
           Text(
-            _kimchiName,
+            _kimchiName ?? '김치',
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          // 김치 설명 표시
-          const Text(
-            '해당 김치 설명',
-            style: TextStyle(fontSize: 16),
-          ),
           const SizedBox(height: 20),
-          // 초기 이미지 표시
           Expanded(
             child: Center(
               child: Container(
@@ -352,10 +410,11 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Image.asset(
-                  _initialImagePath,
+                  _initialImagePath ?? 'assets/images/cabbagekimchi.png',
                   width: MediaQuery.of(context).size.width,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
+                    print('Error loading initial image $_initialImagePath: $error');
                     return const Center(
                       child: Text(
                         '이미지를 로드할 수 없습니다.',
@@ -368,10 +427,9 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             ),
           ),
           const SizedBox(height: 10),
-          // Start Recipe 버튼: 레시피 시작
           Center(
             child: ElevatedButton(
-              onPressed: _startRecipe,
+              onPressed: (_recipeSteps != null && _recipeSteps!.isNotEmpty) ? _startRecipe : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[300],
                 foregroundColor: Colors.black,
@@ -385,26 +443,26 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 세로 모드: 레시피 진행 중 화면 UI
+  // 세로 모드에서 레시피 단계 화면을 렌더링
   Widget _buildRecipeStepsPortrait() {
     final screenWidth = MediaQuery.of(context).size.width;
     final widthRatio = screenWidth / 1080;
     final heightRatio = MediaQuery.of(context).size.height / 2400;
 
+    print('Building recipe steps (portrait)...');
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 뒤로가기 버튼: 이전 페이지로 이동
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.pop(context);
+              print('Navigating back to MainPage from recipe steps...');
+              Navigator.popUntil(context, (route) => route.isFirst);
             },
           ),
           const SizedBox(height: 10),
-          // 단계별 이미지 표시
           Container(
             height: 200,
             decoration: BoxDecoration(
@@ -412,14 +470,19 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: _currentStep < _stepImages.length && _stepImages[_currentStep] != null && _stepImages[_currentStep]!.isNotEmpty
+              child: (_stepImages != null &&
+                      _stepImages!.isNotEmpty &&
+                      _currentStep < _stepImages!.length &&
+                      _stepImages![_currentStep] != null &&
+                      _stepImages![_currentStep]!.isNotEmpty)
                   ? (_imageLoaded[_currentStep] == true
                       ? AspectRatio(
                           aspectRatio: 16 / 9,
                           child: Image.asset(
-                            _stepImages[_currentStep]!,
+                            _stepImages![_currentStep]!,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
+                              print('Error loading step image ${_stepImages![_currentStep]}: $error');
                               return const Center(
                                 child: Text(
                                   '이미지를 로드할 수 없습니다.',
@@ -440,7 +503,6 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             ),
           ),
           const SizedBox(height: 20),
-          // 단계 설명: 현재 단계의 설명 표시
           Center(
             child: Container(
               width: MediaQuery.of(context).size.width * 0.6,
@@ -456,17 +518,24 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                   constraints: BoxConstraints(
                     minHeight: 50,
                   ),
-                  child: Text(
-                    '${_currentStep + 1}. ${_recipeSteps[_currentStep]}',
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: (_recipeSteps != null &&
+                          _recipeSteps!.isNotEmpty &&
+                          _currentStep < _recipeSteps!.length)
+                      ? Text(
+                          '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        )
+                      : const Text(
+                          '레시피 단계가 없습니다.',
+                          style: TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          // 컨트롤 버튼: 이전 단계, 다음 단계
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -477,14 +546,23 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
               ),
               const SizedBox(width: 20),
               IconButton(
-                onPressed: _currentStep == _recipeSteps.length - 1 ? null : _nextStep,
+                onPressed: (_recipeSteps != null &&
+                        _recipeSteps!.isNotEmpty &&
+                        _currentStep < _recipeSteps!.length - 1)
+                    ? _nextStep
+                    : null,
                 icon: const Icon(Icons.arrow_forward),
-                color: _currentStep == _recipeSteps.length - 1 ? Colors.grey : Colors.black,
+                color: (_recipeSteps != null &&
+                        _recipeSteps!.isNotEmpty &&
+                        _currentStep < _recipeSteps!.length - 1)
+                    ? Colors.black
+                    : Colors.grey,
               ),
             ],
           ),
-          // 마지막 단계에서 "레시피 저장하기" 버튼 표시
-          if (_currentStep == _recipeSteps.length - 1) ...[
+          if (_recipeSteps != null &&
+              _recipeSteps!.isNotEmpty &&
+              _currentStep == _recipeSteps!.length - 1) ...[
             const SizedBox(height: 20),
             Center(
               child: SizedBox(
@@ -514,260 +592,161 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 가로 모드: 레시피 진행 중 화면 UI
+  // 가로 모드에서 레시피 단계 화면을 렌더링
   Widget _buildRecipeStepsLandscape() {
     final screenWidth = MediaQuery.of(context).size.width;
     final widthRatio = screenWidth / 1080;
     final heightRatio = MediaQuery.of(context).size.height / 2400;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 뒤로가기 버튼과 이미지: 좌우 배치
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 뒤로가기 버튼: 왼쪽 상단에 유지
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-              const SizedBox(width: 10),
-              // 레시피 과정 이미지: 뒤로가기 버튼 우측, 양쪽 여백 균형 맞춤
-              Expanded(
-                child: Container(
-                  height: MediaQuery.of(context).size.height * 0.7,
-                  width: MediaQuery.of(context).size.width - 68,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: _currentStep < _stepImages.length && _stepImages[_currentStep] != null && _stepImages[_currentStep]!.isNotEmpty
-                        ? (_imageLoaded[_currentStep] == true
-                            ? AspectRatio(
-                                aspectRatio: 16 / 9,
-                                child: Image.asset(
-                                  _stepImages[_currentStep]!,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Center(
-                                      child: Text(
-                                        '이미지를 로드할 수 없습니다.',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            : const Text(
-                                '이미지가 준비중입니다',
-                                style: TextStyle(fontSize: 16),
-                              ))
-                        : const Text(
-                            '이미지가 없습니다',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                  ),
+    print('Building recipe steps (landscape)...');
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    print('Navigating back to MainPage from recipe steps (landscape)...');
+                    Navigator.popUntil(context, (route) => route.isFirst);
+                  },
                 ),
-              ),
-              const SizedBox(width: 58),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // 레시피 내용과 이전/다음 버튼
-          Expanded(
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 이전 버튼
-                  IconButton(
-                    onPressed: _currentStep == 0 ? null : _previousStep,
-                    icon: const Icon(Icons.arrow_back),
-                    color: _currentStep == 0 ? Colors.grey : Colors.black,
-                  ),
-                  const SizedBox(width: 10),
-                  // 레시피 내용 컨테이너
-                  Container(
-                    width: MediaQuery.of(context).size.width * 0.6,
-                    padding: const EdgeInsets.all(8.0),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    width: MediaQuery.of(context).size.width - 68,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey),
+                      color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: 50,
-                        ),
-                        child: Text(
-                          '${_currentStep + 1}. ${_recipeSteps[_currentStep]}',
-                          style: const TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
+                    child: Center(
+                      child: (_stepImages != null &&
+                              _stepImages!.isNotEmpty &&
+                              _currentStep < _stepImages!.length &&
+                              _stepImages![_currentStep] != null &&
+                              _stepImages![_currentStep]!.isNotEmpty)
+                          ? (_imageLoaded[_currentStep] == true
+                              ? AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: Image.asset(
+                                    _stepImages![_currentStep]!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading step image ${_stepImages![_currentStep]} (landscape): $error');
+                                      return const Center(
+                                        child: Text(
+                                          '이미지를 로드할 수 없습니다.',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : const Text(
+                                  '이미지가 준비중입니다',
+                                  style: TextStyle(fontSize: 16),
+                                ))
+                          : const Text(
+                              '이미지가 없습니다',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 58),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: _currentStep == 0 ? null : _previousStep,
+                  icon: const Icon(Icons.arrow_back),
+                  color: _currentStep == 0 ? Colors.grey : Colors.black,
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: 50,
+                      ),
+                      child: (_recipeSteps != null &&
+                              _recipeSteps!.isNotEmpty &&
+                              _currentStep < _recipeSteps!.length)
+                          ? Text(
+                              '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
+                              style: const TextStyle(fontSize: 16),
+                              textAlign: TextAlign.center,
+                            )
+                          : const Text(
+                              '레시피 단계가 없습니다.',
+                              style: TextStyle(fontSize: 16),
+                              textAlign: TextAlign.center,
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: (_recipeSteps != null &&
+                          _recipeSteps!.isNotEmpty &&
+                          _currentStep < _recipeSteps!.length - 1)
+                      ? _nextStep
+                      : null,
+                  icon: const Icon(Icons.arrow_forward),
+                  color: (_recipeSteps != null &&
+                          _recipeSteps!.isNotEmpty &&
+                          _currentStep < _recipeSteps!.length - 1)
+                      ? Colors.black
+                      : Colors.grey,
+                ),
+              ],
+            ),
+            if (_recipeSteps != null &&
+                _recipeSteps!.isNotEmpty &&
+                _currentStep == _recipeSteps!.length - 1) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: SizedBox(
+                  width: 300 * widthRatio,
+                  child: ElevatedButton(
+                    onPressed: _captureRecipeImage,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: EdgeInsets.symmetric(vertical: 10 * heightRatio),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      '레시피 저장하기',
+                      style: TextStyle(
+                        fontSize: 24 * widthRatio,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // 다음 버튼
-                  IconButton(
-                    onPressed: _currentStep == _recipeSteps.length - 1 ? null : _nextStep,
-                    icon: const Icon(Icons.arrow_forward),
-                    color: _currentStep == _recipeSteps.length - 1 ? Colors.grey : Colors.black,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // 마지막 단계에서 "레시피 저장하기" 버튼 표시
-          if (_currentStep == _recipeSteps.length - 1) ...[
-            const SizedBox(height: 20),
-            Center(
-              child: SizedBox(
-                width: 300 * widthRatio,
-                child: ElevatedButton(
-                  onPressed: _captureRecipeImage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    '레시피 저장하기',
-                    style: TextStyle(
-                      fontSize: 36 * widthRatio,
-                      color: Colors.white,
-                    ),
-                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 10),
+            ],
           ],
-        ],
-      ),
-    );
-  }
-
-  // 세로 모드: 하단 내비게이션 바 UI
-  Widget _buildBottomNavigationBarPortrait(double widthRatio, double heightRatio) {
-    return Container(
-      width: MediaQuery.of(context).size.width,
-      height: 100 * heightRatio,
-      color: Colors.grey[200],
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // 홈 버튼: MainPage로 이동
-          IconButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MainPage()),
-              );
-            },
-            icon: Image.asset(
-              'assets/images/home.png',
-              width: 60 * widthRatio,
-              height: 60 * heightRatio,
-            ),
-          ),
-          // 김치 버튼: RecipePage로 돌아감
-          IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: Image.asset(
-              'assets/images/cabbage.png',
-              width: 60 * widthRatio,
-              height: 60 * heightRatio,
-            ),
-          ),
-          // 사용자 버튼: UserPage로 이동
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const UserPage()),
-              );
-            },
-            icon: Image.asset(
-              'assets/images/user.png',
-              width: 60 * widthRatio,
-              height: 60 * heightRatio,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 가로 모드: 하단 내비게이션 바 UI
-  Widget _buildBottomNavigationBarLandscape(double widthRatio, double heightRatio) {
-    return Container(
-      width: MediaQuery.of(context).size.height,
-      height: 200 * heightRatio,
-      color: Colors.grey[200],
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // 홈 버튼: MainPage로 이동
-          RotatedBox(
-            quarterTurns: 3,
-            child: IconButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MainPage()),
-                );
-              },
-              icon: Image.asset(
-                'assets/images/home.png',
-                width: 80 * widthRatio,
-                height: 80 * heightRatio,
-              ),
-            ),
-          ),
-          // 김치 버튼: RecipePage로 돌아감
-          RotatedBox(
-            quarterTurns: 3,
-            child: IconButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: Image.asset(
-                'assets/images/cabbage.png',
-                width: 80 * widthRatio,
-                height: 80 * heightRatio,
-              ),
-            ),
-          ),
-          // 사용자 버튼: UserPage로 이동
-          RotatedBox(
-            quarterTurns: 3,
-            child: IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const UserPage()),
-                );
-              },
-              icon: Image.asset(
-                'assets/images/user.png',
-                width: 80 * widthRatio,
-                height: 80 * heightRatio,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
