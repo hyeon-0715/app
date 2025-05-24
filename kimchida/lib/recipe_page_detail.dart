@@ -775,6 +775,7 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
+  // 가로모드 레시피 내용
   Widget _buildRecipeStepsLandscape() {
     final screenWidth = MediaQuery.of(context).size.width;
     final widthRatio = screenWidth / 1080;
@@ -783,10 +784,10 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     const double containerHeight = 200;
     final containerWidth = screenWidth - 68;
 
-    const double recipeTextFontSize = 16;
+    const double recipeTextFontSize = 28;
 
-    const double recipeContainerWidth = 300;
-    const double recipeContainerHeight = 50;
+    const double recipeContainerWidth = 450;
+    const double recipeContainerHeight = 80;
 
     print('Building recipe steps (landscape)...');
     return Padding(
@@ -924,7 +925,7 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                     _currentStep == _recipeSteps!.length - 1) ...[
                   const SizedBox(height: 10),
                   SizedBox(
-                    width: 300 * widthRatio,
+                    width: 250 * widthRatio,
                     child: ElevatedButton(
                       onPressed: _captureRecipeImage,
                       style: ElevatedButton.styleFrom(
