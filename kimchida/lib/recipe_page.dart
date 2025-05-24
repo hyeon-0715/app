@@ -29,10 +29,12 @@ class _RecipePageState extends State<RecipePage> {
   @override
   void initState() {
     super.initState();
-    // 세로 모드 고정
+    // 가로/세로 모드를 모두 허용 (화면 자동 회전에 따라 동작)
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
     ]);
 
     // 스크롤 컨트롤러 초기화 및 리스너 추가
@@ -157,6 +159,13 @@ class _RecipePageState extends State<RecipePage> {
     _isMounted = false; // 비동기 작업 중단 플래그
     _scrollController.removeListener(_updateMiddleSectionHeight);
     _scrollController.dispose();
+    // 방향 설정 복원 (필요한 경우 MainPage의 기본 설정으로 복원)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     super.dispose();
   }
 
@@ -255,11 +264,29 @@ class _RecipePageState extends State<RecipePage> {
     )..layout();
     _minMiddleSectionHeight = textPainter.height + (60 * heightRatio) + (60 * heightRatio);
 
+    return Scaffold(
+      body: SafeArea(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            print('Orientation in RecipePage: $orientation');
+            return orientation == Orientation.portrait
+                ? _buildPortraitLayout(widthRatio, heightRatio, screenWidth)
+                : _buildLandscapeLayout(widthRatio, heightRatio, screenWidth, screenHeight);
+          },
+        ),
+      ),
+    );
+  }
+
+  // 세로 모드 레이아웃 빌드
+  Widget _buildPortraitLayout(double widthRatio, double heightRatio, double screenWidth) {
+    print('Rendering portrait layout in RecipePage...');
     return Container(
       width: screenWidth,
       color: const Color(0xFFF5E9D6),
       child: Column(
         children: [
+          // 상단바: 앱 로고 또는 아이콘 표시
           Container(
             width: screenWidth,
             height: 60 * heightRatio,
@@ -274,6 +301,7 @@ class _RecipePageState extends State<RecipePage> {
               ),
             ),
           ),
+          // 중단 섹션: 스크롤에 따라 높이가 변하는 섹션, 배경 이미지와 "Kimchi" 텍스트 표시
           Container(
             width: screenWidth,
             height: _middleSectionHeight,
@@ -314,6 +342,7 @@ class _RecipePageState extends State<RecipePage> {
               ),
             ),
           ),
+          // 하단 섹션: 김치 레시피 목록과 페이지네이션 버튼 표시
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -416,6 +445,152 @@ class _RecipePageState extends State<RecipePage> {
       ),
     );
   }
+
+  // 가로 모드 레이아웃 빌드
+  Widget _buildLandscapeLayout(double widthRatio, double heightRatio, double screenWidth, double screenHeight) {
+    print('Rendering landscape layout in RecipePage...');
+    return Row(
+      children: [
+        // 상단바: 가로 모드에서 회전된 상태로 표시
+        RotatedBox(
+          quarterTurns: 3,
+          child: Container(
+            width: screenHeight,
+            height: 180 * heightRatio,
+            color: Colors.grey[800],
+            child: Center(
+              child: Text(
+                'ㅁ',
+                style: TextStyle(
+                  fontSize: 24 * widthRatio,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 메인 콘텐츠: 김치 레시피 목록 표시
+        Expanded(
+          child: Container(
+            color: const Color(0xFFF5E9D6),
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 60 * widthRatio,
+                      top: 60 * heightRatio,
+                    ),
+                    child: Text(
+                      'Kimchi',
+                      style: TextStyle(
+                        fontSize: 90 * widthRatio,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.white,
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (errorMessage != null)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(errorMessage!),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: _loadKimchiList,
+                            child: const Text('재시도'),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: 60 * widthRatio,
+                        top: 20 * heightRatio,
+                      ),
+                      child: Text(
+                        '한국의 전통 발효식품으로 소금에 절인 배추나 부 등을\n고춧가루, 파 등의 양념에 버무린 뒤 발효시켜 만드는\n한국의 국민 음식 중 하나',
+                        style: TextStyle(
+                          fontSize: 30 * widthRatio,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 80 * widthRatio),
+                      child: GridView.count(
+                        crossAxisCount: 2, // 가로 모드에서는 2열로 표시
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 20 * widthRatio,
+                        mainAxisSpacing: 20 * heightRatio,
+                        childAspectRatio: 1.0,
+                        children: getCurrentKimchiList().map((kimchi) {
+                          return RecipeItem(
+                            imagePath: kimchi['imagePath']!,
+                            title: kimchi['name']!,
+                            isImageLoaded: _imageLoaded[kimchi['imagePath']] ?? false,
+                            onTap: () {
+                              print('Navigating to RecipePageDetail for ${kimchi['name']}');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RecipePageDetail(
+                                    kimchiData: kimchi['kimchiData'] as List<Map<String, dynamic>>,
+                                    recipeId: 'mock_recipe_id_${kimchi['kimchi_num']}',
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    // 페이지네이션 버튼: 총 페이지 수에 따라 동적으로 생성
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        getTotalPages(),
+                        (index) {
+                          final page = index + 1;
+                          return Row(
+                            children: [
+                              PaginationButton(
+                                label: page.toString(),
+                                isSelected: currentPage == page,
+                                onTap: () => _goToPage(page),
+                              ),
+                              SizedBox(width: 10 * widthRatio),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 100 * heightRatio),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class RecipeItem extends StatelessWidget {
@@ -496,7 +671,7 @@ class RecipeItem extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            style: TextStyle(fontSize: 24 * widthRatio, color: Colors.black),
+            style: TextStyle(fontSize: 40 * widthRatio, color: Colors.black),
             textAlign: TextAlign.center,
           ),
         ],

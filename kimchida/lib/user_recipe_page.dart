@@ -36,6 +36,12 @@ class _UserRecipePageState extends State<UserRecipePage> {
   bool isSubmitting = false; // 제출 진행 중 여부
   String? errorMessage; // 에러 메시지
 
+  // 컨테이너 높이를 세로/가로 모드에 따라 조정하기 위한 변수
+  double portraitPhotoContainerHeight = 400; // 사진 입력 모드 - 세로 모드 높이
+  double landscapePhotoContainerHeight = 300; // 사진 입력 모드 - 가로 모드 높이
+  double portraitTextContainerHeight = 600; // 텍스트 입력 모드 - 세로 모드 높이
+  double landscapeTextContainerHeight = 400; // 텍스트 입력 모드 - 가로 모드 높이
+  
   @override
   void initState() {
     super.initState();
@@ -471,298 +477,283 @@ class _UserRecipePageState extends State<UserRecipePage> {
     final previewWidth = containerWidth * 0.4;
     final previewHeight = (400 * heightRatio) * 0.4;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFF5E9D6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: screenWidth,
-              height: 60 * heightRatio,
-              color: Colors.grey[800],
-              child: Center(
-                child: Text(
-                  'ㅁ',
-                  style: TextStyle(
-                    fontSize: 24 * widthRatio,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              width: screenWidth,
-              height: 600 * heightRatio,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/kimchiback.png'),
-                  fit: BoxFit.cover,
-                  opacity: 0.5,
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color.fromARGB(255, 255, 243, 223),
-                    Color.fromARGB(255, 189, 180, 165),
-                  ],
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 60 * widthRatio,
-                  top: 60 * heightRatio,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'User recipe',
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        print('Orientation in UserRecipePage: $orientation');
+        return Scaffold(
+          resizeToAvoidBottomInset: true,
+          backgroundColor: const Color(0xFFF5E9D6),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Container(
+                  width: screenWidth,
+                  height: 60 * heightRatio,
+                  color: Colors.grey[800],
+                  child: Center(
+                    child: Text(
+                      'ㅁ',
                       style: TextStyle(
-                        fontSize: 90 * widthRatio,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.white,
-                            offset: Offset(2, 2),
-                            blurRadius: 4,
-                          ),
-                        ],
+                        fontSize: 24 * widthRatio,
+                        color: Colors.white,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Container(
+                Container(
                   width: screenWidth,
-                  color: const Color(0xFFF5E9D6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: 60 * widthRatio,
-                          top: 60 * heightRatio,
-                        ),
-                        child: Text(
-                          widget.inputMode == 'photo' ? '사진' : '텍스트',
+                  height: 600 * heightRatio,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/kimchiback.png'),
+                      fit: BoxFit.cover,
+                      opacity: 0.5,
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color.fromARGB(255, 255, 243, 223),
+                        Color.fromARGB(255, 189, 180, 165),
+                      ],
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 60 * widthRatio,
+                      top: 60 * heightRatio,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'User recipe',
                           style: TextStyle(
-                            fontSize: 60 * widthRatio,
+                            fontSize: 90 * widthRatio,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 30 * heightRatio),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 60 * widthRatio),
-                        child: Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(20 * widthRatio),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5E9D6),
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 8,
+                            shadows: const [
+                              Shadow(
+                                color: Colors.white,
                                 offset: Offset(2, 2),
+                                blurRadius: 4,
                               ),
                             ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.inputMode == 'photo'
-                                    ? '사용하시고 싶으신 레시피 사진을 올려주세요'
-                                    : '사용하시고 싶으신 레시피를 작성해주세요',
-                                style: TextStyle(
-                                  fontSize: 36 * widthRatio,
-                                  color: Colors.black,
-                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Container(
+                      width: screenWidth,
+                      color: const Color(0xFFF5E9D6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: 60 * widthRatio,
+                              top: 60 * heightRatio,
+                            ),
+                            child: Text(
+                              widget.inputMode == 'photo' ? '사진' : '텍스트',
+                              style: TextStyle(
+                                fontSize: 60 * widthRatio,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
-                              SizedBox(height: 20 * heightRatio),
-                              Center(
-                                child: Container(
-                                  width: containerWidth,
-                                  height: widget.inputMode == 'photo' ? 400 * heightRatio : 600 * heightRatio,
-                                  decoration: BoxDecoration(
-                                    color: widget.inputMode == 'photo' ? Colors.white : const Color(0xFFE5D9C6),
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(10),
-                                    image: widget.inputMode == 'photo'
-                                        ? const DecorationImage(
-                                            image: AssetImage('assets/images/void.png'),
-                                            fit: BoxFit.cover,
-                                            opacity: 0.2,
-                                          )
-                                        : null,
+                            ),
+                          ),
+                          SizedBox(height: 30 * heightRatio),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 60 * widthRatio),
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(20 * widthRatio),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5E9D6),
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 8,
+                                    offset: Offset(2, 2),
                                   ),
-                                  child: widget.inputMode == 'photo'
-                                      ? Stack(
-                                          children: [
-                                            if (_selectedImages.isEmpty)
-                                              GestureDetector(
-                                                onTap: _handleMultiImageSelection,
-                                                child: Center(
-                                                  child: Icon(
-                                                    Icons.add,
-                                                    size: 100 * widthRatio,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ),
-                                            if (_selectedImages.isNotEmpty) ...[
-                                              ..._selectedImages.asMap().entries.map((entry) {
-                                                int index = entry.key;
-                                                XFile image = entry.value;
-                                                double offset = (_selectedImages.length - 1 - index) * 10.0;
-                                                return Center(
-                                                  child: Container(
-                                                    margin: EdgeInsets.only(right: offset),
-                                                    width: previewWidth,
-                                                    height: previewHeight,
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(color: Colors.grey),
-                                                      borderRadius: BorderRadius.circular(5),
-                                                      boxShadow: const [
-                                                        BoxShadow(
-                                                          color: Colors.black26,
-                                                          blurRadius: 4,
-                                                          offset: Offset(2, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Stack(
-                                                      children: [
-                                                        ClipRRect(
-                                                          borderRadius: BorderRadius.circular(5),
-                                                          child: Image.file(
-                                                            File(image.path),
-                                                            width: previewWidth,
-                                                            height: previewHeight,
-                                                            fit: BoxFit.cover,
-                                                            errorBuilder: (context, error, stackTrace) {
-                                                              print('Error loading selected image ${image.path}: $error');
-                                                              return const Icon(Icons.error);
-                                                            },
-                                                          ),
-                                                        ),
-                                                        Positioned(
-                                                          top: 5,
-                                                          right: 5,
-                                                          child: GestureDetector(
-                                                            onTap: () => _removeImage(index),
-                                                            child: Container(
-                                                              padding: EdgeInsets.all(5 * widthRatio),
-                                                              decoration: const BoxDecoration(
-                                                                color: Colors.red,
-                                                                shape: BoxShape.circle,
-                                                              ),
-                                                              child: Icon(
-                                                                Icons.close,
-                                                                size: 30 * widthRatio,
-                                                                color: Colors.white,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList().reversed.toList(),
-                                              Positioned(
-                                                bottom: 5,
-                                                left: 5,
-                                                child: GestureDetector(
-                                                  onTap: _handleMultiImageSelection,
-                                                  child: Container(
-                                                    padding: EdgeInsets.all(5 * widthRatio),
-                                                    decoration: const BoxDecoration(
-                                                      color: Colors.green,
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.add,
-                                                      size: 60 * widthRatio,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              Positioned(
-                                                bottom: 5,
-                                                right: 5,
-                                                child: Container(
-                                                  width: 30 * widthRatio,
-                                                  height: 30 * widthRatio,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    border: Border.all(color: Colors.grey),
-                                                    borderRadius: BorderRadius.circular(10),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(
-                                                      '${_selectedImages.length}',
-                                                      style: TextStyle(
-                                                        fontSize: 16 * widthRatio,
-                                                        color: Colors.black,
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.inputMode == 'photo'
+                                        ? '사용하시고 싶으신 레시피 사진을 올려주세요'
+                                        : '사용하시고 싶으신 레시피를 작성해주세요',
+                                    style: TextStyle(
+                                      fontSize: 36 * widthRatio,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  SizedBox(height: 20 * heightRatio),
+                                  Center(
+                                  child: Container(
+                                    width: containerWidth,
+                                    // 컨테이너 높이를 inputMode와 화면 방향에 따라 동적으로 설정
+                                    // - 사진 입력 모드일 경우:
+                                    //   - 세로 모드(Orientation.portrait): portraitPhotoContainerHeight 사용
+                                    //   - 가로 모드(Orientation.landscape): landscapePhotoContainerHeight 사용
+                                    // - 텍스트 입력 모드일 경우:
+                                    //   - 세로 모드(Orientation.portrait): portraitTextContainerHeight 사용
+                                    //   - 가로 모드(Orientation.landscape): landscapeTextContainerHeight 사용
+                                    height: widget.inputMode == 'photo'
+                                        ? (orientation == Orientation.portrait
+                                            ? portraitPhotoContainerHeight * heightRatio
+                                            : landscapePhotoContainerHeight * heightRatio)
+                                        : (orientation == Orientation.portrait
+                                            ? portraitTextContainerHeight * heightRatio
+                                            : 300),
+                                    decoration: BoxDecoration(
+                                      color: widget.inputMode == 'photo' ? Colors.white : const Color(0xFFE5D9C6),
+                                      border: Border.all(color: Colors.grey),
+                                      borderRadius: BorderRadius.circular(10),
+                                      image: widget.inputMode == 'photo'
+                                          ? const DecorationImage(
+                                              image: AssetImage('assets/images/void.png'),
+                                              fit: BoxFit.cover,
+                                              opacity: 0.2,
+                                            )
+                                          : null,
+                                    ),
+                                      child: widget.inputMode == 'photo'
+                                          ? Stack(
+                                              children: [
+                                                if (_selectedImages.isEmpty)
+                                                  GestureDetector(
+                                                    onTap: _handleMultiImageSelection,
+                                                    child: Center(
+                                                      child: Icon(
+                                                        Icons.add,
+                                                        size: 100 * widthRatio,
+                                                        color: Colors.grey,
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        )
-                                      : Padding(
-                                          padding: EdgeInsets.all(20 * widthRatio),
-                                          child: Column(
-                                            children: [
-                                              TextField(
-                                                controller: _titleController,
-                                                focusNode: _titleFocusNode,
-                                                decoration: InputDecoration(
-                                                  hintText: _showTitleHint ? '레시피 제목을 적어주세요' : null,
-                                                  hintStyle: TextStyle(
-                                                    color: Colors.grey[400],
-                                                    fontSize: 36 * widthRatio,
+                                                if (_selectedImages.isNotEmpty) ...[
+                                                  ..._selectedImages.asMap().entries.map((entry) {
+                                                    int index = entry.key;
+                                                    XFile image = entry.value;
+                                                    double offset = (_selectedImages.length - 1 - index) * 10.0;
+                                                    return Center(
+                                                      child: Container(
+                                                        margin: EdgeInsets.only(right: offset),
+                                                        width: previewWidth,
+                                                        height: previewHeight,
+                                                        decoration: BoxDecoration(
+                                                          border: Border.all(color: Colors.grey),
+                                                          borderRadius: BorderRadius.circular(5),
+                                                          boxShadow: const [
+                                                            BoxShadow(
+                                                              color: Colors.black26,
+                                                              blurRadius: 4,
+                                                              offset: Offset(2, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Stack(
+                                                          children: [
+                                                            ClipRRect(
+                                                              borderRadius: BorderRadius.circular(5),
+                                                              child: Image.file(
+                                                                File(image.path),
+                                                                width: previewWidth,
+                                                                height: previewHeight,
+                                                                fit: BoxFit.cover,
+                                                                errorBuilder: (context, error, stackTrace) {
+                                                                  print('Error loading selected image ${image.path}: $error');
+                                                                  return const Icon(Icons.error);
+                                                                },
+                                                              ),
+                                                            ),
+                                                            Positioned(
+                                                              top: 5,
+                                                              right: 5,
+                                                              child: GestureDetector(
+                                                                onTap: () => _removeImage(index),
+                                                                child: Container(
+                                                                  padding: EdgeInsets.all(5 * widthRatio),
+                                                                  decoration: const BoxDecoration(
+                                                                    color: Colors.red,
+                                                                    shape: BoxShape.circle,
+                                                                  ),
+                                                                  child: Icon(
+                                                                    Icons.close,
+                                                                    size: 30 * widthRatio,
+                                                                    color: Colors.white,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList().reversed.toList(),
+                                                  Positioned(
+                                                    bottom: 5,
+                                                    left: 5,
+                                                    child: GestureDetector(
+                                                      onTap: _handleMultiImageSelection,
+                                                      child: Container(
+                                                        padding: EdgeInsets.all(5 * widthRatio),
+                                                        decoration: const BoxDecoration(
+                                                          color: Colors.green,
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.add,
+                                                          size: 60 * widthRatio,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
-                                                  border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(10),
-                                                    borderSide: const BorderSide(color: Colors.grey),
+                                                  Positioned(
+                                                    bottom: 5,
+                                                    right: 5,
+                                                    child: Container(
+                                                      width: 30 * widthRatio,
+                                                      height: 30 * widthRatio,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        border: Border.all(color: Colors.grey),
+                                                        borderRadius: BorderRadius.circular(10),
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '${_selectedImages.length}',
+                                                          style: TextStyle(
+                                                            fontSize: 16 * widthRatio,
+                                                            color: Colors.black,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
-                                                  filled: true,
-                                                  fillColor: Colors.white,
-                                                ),
-                                                style: TextStyle(
-                                                  fontSize: 36 * widthRatio,
-                                                  color: Colors.black,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    _showTitleHint = value.isEmpty;
-                                                  });
-                                                },
-                                              ),
-                                              SizedBox(height: 20 * heightRatio),
-                                              Expanded(
-                                                child: SingleChildScrollView(
-                                                  child: TextField(
-                                                    controller: _contentController,
-                                                    focusNode: _contentFocusNode,
+                                                ],
+                                              ],
+                                            )
+                                          : Padding(
+                                              padding: EdgeInsets.all(20 * widthRatio),
+                                              child: Column(
+                                                children: [
+                                                  TextField(
+                                                    controller: _titleController,
+                                                    focusNode: _titleFocusNode,
                                                     decoration: InputDecoration(
-                                                      hintText: _showContentHint
-                                                          ? '1. 겉절이 채소는 양상추, 치커리, 샐러드채소를 준비하여 물에 씻어 먹기 좋은 크기로 썬다.\n2. 당근 양념을 만든다...'
-                                                          : null,
+                                                      hintText: _showTitleHint ? '레시피 제목을 적어주세요' : null,
                                                       hintStyle: TextStyle(
                                                         color: Colors.grey[400],
                                                         fontSize: 36 * widthRatio,
@@ -778,85 +769,118 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                       fontSize: 36 * widthRatio,
                                                       color: Colors.black,
                                                     ),
-                                                    maxLines: null,
-                                                    keyboardType: TextInputType.multiline,
-                                                    enableInteractiveSelection: true, // 선택 및 붙여넣기 활성화
-                                                    contextMenuBuilder: (context, editableTextState) {
-                                                      return AdaptiveTextSelectionToolbar.editableText(
-                                                        editableTextState: editableTextState,
-                                                      );
-                                                    },
                                                     onChanged: (value) {
                                                       setState(() {
-                                                        _showContentHint = value.isEmpty;
+                                                        _showTitleHint = value.isEmpty;
                                                       });
                                                     },
                                                   ),
-                                                ),
+                                                  SizedBox(height: 20 * heightRatio),
+                                                  Expanded(
+                                                    child: SingleChildScrollView(
+                                                      child: TextField(
+                                                        controller: _contentController,
+                                                        focusNode: _contentFocusNode,
+                                                        decoration: InputDecoration(
+                                                          hintText: _showContentHint
+                                                              ? '1. 겉절이 채소는 양상추, 치커리, 샐러드채소를 준비하여 물에 씻어 먹기 좋은 크기로 썬다.\n2. 당근 양념을 만든다...'
+                                                              : null,
+                                                          hintStyle: TextStyle(
+                                                            color: Colors.grey[400],
+                                                            fontSize: 36 * widthRatio,
+                                                          ),
+                                                          border: OutlineInputBorder(
+                                                            borderRadius: BorderRadius.circular(10),
+                                                            borderSide: const BorderSide(color: Colors.grey),
+                                                          ),
+                                                          filled: true,
+                                                          fillColor: Colors.white,
+                                                        ),
+                                                        style: TextStyle(
+                                                          fontSize: 36 * widthRatio,
+                                                          color: Colors.black,
+                                                        ),
+                                                        maxLines: null,
+                                                        keyboardType: TextInputType.multiline,
+                                                        enableInteractiveSelection: true, // 선택 및 붙여넣기 활성화
+                                                        contextMenuBuilder: (context, editableTextState) {
+                                                          return AdaptiveTextSelectionToolbar.editableText(
+                                                            editableTextState: editableTextState,
+                                                          );
+                                                        },
+                                                        onChanged: (value) {
+                                                          setState(() {
+                                                            _showContentHint = value.isEmpty;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              SizedBox(height: 20 * heightRatio),
-                              if (errorMessage != null)
-                                Center(
-                                  child: Text(
-                                    errorMessage!,
-                                    style: const TextStyle(color: Colors.red),
+                                            ),
+                                    ),
                                   ),
-                                ),
-                              Center(
-                                child: SizedBox(
-                                  width: 300 * widthRatio,
-                                  child: ElevatedButton(
-                                    onPressed: (widget.inputMode == 'photo' && _selectedImages.isNotEmpty) ||
-                                            (widget.inputMode == 'text' &&
-                                                _titleController.text.isNotEmpty &&
-                                                _contentController.text.isNotEmpty)
-                                        ? (isSubmitting ? null : _onComplete)
-                                        : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: (widget.inputMode == 'photo' && _selectedImages.isNotEmpty) ||
-                                              (widget.inputMode == 'text' &&
-                                                  _titleController.text.isNotEmpty &&
-                                                  _contentController.text.isNotEmpty)
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                                  SizedBox(height: 20 * heightRatio),
+                                  if (errorMessage != null)
+                                    Center(
+                                      child: Text(
+                                        errorMessage!,
+                                        style: const TextStyle(color: Colors.red),
                                       ),
                                     ),
-                                    child: isSubmitting
-                                        ? const CircularProgressIndicator(color: Colors.white)
-                                        : Text(
-                                            '완료',
-                                            style: TextStyle(
-                                              fontSize: 36 * widthRatio,
-                                              color: Colors.white,
-                                            ),
+                                  Center(
+                                    child: SizedBox(
+                                      width: 300 * widthRatio,
+                                      child: ElevatedButton(
+                                        onPressed: (widget.inputMode == 'photo' && _selectedImages.isNotEmpty) ||
+                                                (widget.inputMode == 'text' &&
+                                                    _titleController.text.isNotEmpty &&
+                                                    _contentController.text.isNotEmpty)
+                                            ? (isSubmitting ? null : _onComplete)
+                                            : null,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: (widget.inputMode == 'photo' && _selectedImages.isNotEmpty) ||
+                                                  (widget.inputMode == 'text' &&
+                                                      _titleController.text.isNotEmpty &&
+                                                      _contentController.text.isNotEmpty)
+                                              ? Colors.green
+                                              : Colors.grey,
+                                          padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
                                           ),
+                                        ),
+                                        child: isSubmitting
+                                            ? const CircularProgressIndicator(color: Colors.white)
+                                            : Text(
+                                                '완료',
+                                                style: TextStyle(
+                                                  fontSize: 36 * widthRatio,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  Container(
+                                    height: 20 * heightRatio,
+                                    color: const Color(0xFFF5E9D6),
+                                  ),
+                                ],
                               ),
-                              Container(
-                                height: 20 * heightRatio,
-                                color: const Color(0xFFF5E9D6),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }
     );
   }
 }
@@ -1688,9 +1712,8 @@ class LoadingCompletePage extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: () {
                             print('Navigating to MainPage from LoadingCompletePage...');
-                            // 모든 이전 스택 제거하고 MainPage로 이동
-                            Navigator.pushAndRemoveUntil(
-                              context,
+                            // 루트 내비게이터를 사용하여 모든 스택 제거하고 MainPage로 이동
+                            Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                               MaterialPageRoute(builder: (context) => const MainPage()),
                               (Route<dynamic> route) => false, // 모든 경로 제거
                             );

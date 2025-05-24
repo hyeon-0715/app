@@ -37,21 +37,19 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
   String? _kimchiName;
   String? _initialImagePath;
   final Map<int, bool> _imageLoaded = {};
-  Orientation? _lastOrientation; // 마지막으로 감지된 방향 저장
+  Orientation? _lastOrientation;
 
   @override
   void initState() {
     super.initState();
     print('Initializing RecipePageDetail with all orientations allowed');
 
-    // 가로/세로 모드 모두 허용하도록 초기 설정
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]).then((_) {
-      // 방향 설정이 적용된 후 UI 갱신 보장
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           setState(() {});
@@ -59,14 +57,11 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
       }
     });
 
-    // 김치 이름 초기화 (widget.kimchiData에서 가져옴)
     _kimchiName = widget.kimchiData.isNotEmpty ? widget.kimchiData[0]['name']?.toString() ?? '김치' : '김치';
 
-    // widget.kimchiData에서 레시피 데이터 초기화
     if (widget.kimchiData.isNotEmpty) {
       _recipeSteps = widget.kimchiData.map((step) {
         String detail = step['recipe_detail']?.toString() ?? '레시피 단계 없음';
-        // "숫자." 패턴이 여러 번 반복된 경우 모두 제거 (예: "1.", "1. 1.", "1. 1. 1.")
         return detail.replaceFirst(RegExp(r'(\d+\.\s*)+'), '').trim();
       }).toList();
       _stepImages = widget.kimchiData
@@ -81,7 +76,6 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
       print('Initialized _stepImages: $_stepImages');
       print('Initialized _kimchiName: $_kimchiName');
 
-      // 빌드 완료 후 이미지 프리로딩 시작
       WidgetsBinding.instance.addPostFrameCallback((_) {
         for (int i = 0; i < _recipeSteps!.length && i < _stepImages!.length; i++) {
           _imageLoaded[i] = false;
@@ -97,11 +91,12 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
   @override
   void dispose() {
     _scrollController.dispose();
-    // 페이지 종료 시 방향을 세로로 복원
     print('Disposing RecipePageDetail, restoring portrait orientation');
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
   }
@@ -118,12 +113,9 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
 
     try {
       print('Preloading image for step $step: ${_stepImages![step]}');
-      // 네트워크 URL인지 확인
       if (_stepImages![step]!.startsWith('http://') || _stepImages![step]!.startsWith('https://')) {
-        // 네트워크 이미지 프리로딩
         await precacheImage(NetworkImage(_stepImages![step]!), context);
       } else {
-        // 로컬 에셋 이미지 프리로딩
         await precacheImage(AssetImage(_stepImages![step]!), context);
       }
       if (mounted) {
@@ -235,7 +227,6 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     }
   }
 
-  // 방향 변경 시 해당 방향으로 고정하는 메서드
   Future<void> _lockOrientation(Orientation orientation) async {
     if (_lastOrientation != orientation) {
       print('Locking orientation to: $orientation');
@@ -244,9 +235,13 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
         await SystemChrome.setPreferredOrientations([
           DeviceOrientation.portraitUp,
           DeviceOrientation.portraitDown,
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
         ]);
       } else {
         await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight,
         ]);
@@ -259,7 +254,7 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     print('Building RecipePageDetail...');
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    const double baseWidth = 1080;
+    const double baseWidth = 2400;
     const double baseHeight = 2400;
     final widthRatio = screenWidth / baseWidth;
     final heightRatio = screenHeight / baseHeight;
@@ -271,10 +266,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             OrientationBuilder(
               builder: (context, orientation) {
                 print('Orientation changed to: $orientation');
-                // 방향 변경 시 해당 방향으로 고정
                 _lockOrientation(orientation);
 
-                // 세로/가로 모드에 따라 적절한 UI 렌더링
                 return orientation == Orientation.portrait
                     ? _buildPortraitLayout(widthRatio, heightRatio, screenWidth)
                     : _buildLandscapeLayout(widthRatio, heightRatio, screenWidth, screenHeight);
@@ -353,12 +346,10 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 세로 모드 UI를 렌더링하는 메서드
   Widget _buildPortraitLayout(double widthRatio, double heightRatio, double screenWidth) {
     print('Rendering portrait layout...');
     return Column(
       children: [
-        // 상단바: 앱의 상단에 표시되는 네비게이션 바
         Container(
           width: screenWidth,
           height: 60 * heightRatio,
@@ -373,7 +364,6 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             ),
           ),
         ),
-        // 메인 콘텐츠: 초기 화면 또는 레시피 단계 화면 표시
         Expanded(
           child: Container(
             color: const Color(0xFFF5E9D6),
@@ -384,43 +374,37 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 가로 모드 UI를 렌더링하는 메서드
   Widget _buildLandscapeLayout(double widthRatio, double heightRatio, double screenWidth, double screenHeight) {
     print('Rendering landscape layout...');
-    return SingleChildScrollView(
-      child: Row(
-        children: [
-          // 상단바: 가로 모드에서 회전된 상태로 표시
-          RotatedBox(
-            quarterTurns: 3,
-            child: Container(
-              width: screenHeight,
-              height: 180 * heightRatio,
-              color: Colors.grey[800],
-              child: Center(
-                child: Text(
-                  'ㅁ',
-                  style: TextStyle(
-                    fontSize: 24 * widthRatio,
-                    color: Colors.white,
-                  ),
+    return Row(
+      children: [
+        RotatedBox(
+          quarterTurns: 3,
+          child: Container(
+            width: screenHeight,
+            height: 180 * heightRatio,
+            color: Colors.grey[800],
+            child: Center(
+              child: Text(
+                'ㅁ',
+                style: TextStyle(
+                  fontSize: 24 * widthRatio,
+                  color: Colors.white,
                 ),
               ),
             ),
           ),
-          // 메인 콘텐츠: 초기 화면 또는 레시피 단계 화면 표시
-          Expanded(
-            child: Container(
-              color: const Color(0xFFF5E9D6),
-              child: _isRecipeStarted ? _buildRecipeStepsLandscape() : _buildInitialViewPortrait(),
-            ),
+        ),
+        Expanded(
+          child: Container(
+            color: const Color(0xFFF5E9D6),
+            child: _isRecipeStarted ? _buildRecipeStepsLandscape() : _buildInitialViewLandscape(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  // 세로 모드에서 초기 화면(김치 이름과 설명)을 렌더링
   Widget _buildInitialViewPortrait() {
     print('Building initial view (portrait)...');
     return Padding(
@@ -432,7 +416,7 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
               print('Navigating back to RecipePage...');
-              Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
+              Navigator.pop(context);
             },
           ),
           const SizedBox(height: 10),
@@ -441,7 +425,6 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          const SizedBox(height: 20),
           Expanded(
             child: Center(
               child: Container(
@@ -508,181 +491,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     );
   }
 
-  // 세로 모드에서 레시피 단계 화면을 렌더링
-  Widget _buildRecipeStepsPortrait() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final widthRatio = screenWidth / 1080;
-    final heightRatio = MediaQuery.of(context).size.height / 2400;
-
-    // 이미지 컨테이너의 너비와 높이를 동일하게 설정
-    final containerWidth = screenWidth - 32.0; // 패딩(16.0 * 2)을 고려한 너비
-    final containerHeight = containerWidth; // 높이를 너비와 동일하게 설정
-
-    print('Building recipe steps (portrait)...');
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              print('Navigating back to RecipePage from recipe steps...');
-              Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
-            },
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: containerWidth,
-            height: containerHeight, // 높이를 너비와 동일하게 설정
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: (_stepImages != null &&
-                      _stepImages!.isNotEmpty &&
-                      _currentStep < _stepImages!.length &&
-                      _stepImages![_currentStep] != null &&
-                      _stepImages![_currentStep]!.isNotEmpty)
-                  ? (_imageLoaded[_currentStep] == true
-                      ? AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: _stepImages![_currentStep]!.startsWith('http://') ||
-                                  _stepImages![_currentStep]!.startsWith('https://')
-                              ? Image.network(
-                                  _stepImages![_currentStep]!,
-                                  fit: BoxFit.contain,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(child: CircularProgressIndicator());
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    print('Error loading step network image ${_stepImages![_currentStep]}: $error');
-                                    return Image.asset(
-                                      'assets/images/photo.png',
-                                      fit: BoxFit.contain,
-                                    );
-                                  },
-                                )
-                              : Image.asset(
-                                  _stepImages![_currentStep]!,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    print('Error loading step asset image ${_stepImages![_currentStep]}: $error');
-                                    return const Center(
-                                      child: Text(
-                                        '이미지를 로드할 수 없습니다.',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        )
-                      : const Center(child: CircularProgressIndicator()))
-                  : const Text(
-                      '이미지가 없습니다',
-                      style: TextStyle(fontSize: 16),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Center(
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.6,
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: 50,
-                  ),
-                  child: (_recipeSteps != null &&
-                          _recipeSteps!.isNotEmpty &&
-                          _currentStep < _recipeSteps!.length)
-                      ? Text(
-                          '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
-                          style: const TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        )
-                      : const Text(
-                          '레시피 단계가 없습니다.',
-                          style: TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed: _currentStep == 0 ? null : _previousStep,
-                icon: const Icon(Icons.arrow_back),
-                color: _currentStep == 0 ? Colors.grey : Colors.black,
-              ),
-              const SizedBox(width: 20),
-              IconButton(
-                onPressed: (_recipeSteps != null &&
-                        _recipeSteps!.isNotEmpty &&
-                        _currentStep < _recipeSteps!.length - 1)
-                    ? _nextStep
-                    : null,
-                icon: const Icon(Icons.arrow_forward),
-                color: (_recipeSteps != null &&
-                        _recipeSteps!.isNotEmpty &&
-                        _currentStep < _recipeSteps!.length - 1)
-                    ? Colors.black
-                    : Colors.grey,
-              ),
-            ],
-          ),
-          if (_recipeSteps != null &&
-              _recipeSteps!.isNotEmpty &&
-              _currentStep == _recipeSteps!.length - 1) ...[
-            const SizedBox(height: 20),
-            Center(
-              child: SizedBox(
-                width: 300 * widthRatio,
-                child: ElevatedButton(
-                  onPressed: _captureRecipeImage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    '레시피 저장하기',
-                    style: TextStyle(
-                      fontSize: 36 * widthRatio,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // 가로 모드에서 레시피 단계 화면을 렌더링
-  Widget _buildRecipeStepsLandscape() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final widthRatio = screenWidth / 1080;
-    final heightRatio = MediaQuery.of(context).size.height / 2400;
-
-    print('Building recipe steps (landscape)...');
+  Widget _buildInitialViewLandscape() {
+    print('Building initial view (landscape)...');
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -695,63 +505,57 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
-                    print('Navigating back to RecipePage from recipe steps (landscape)...');
-                    Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
+                    print('Navigating back to RecipePage from initial view (landscape)...');
+                    Navigator.pop(context);
                   },
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Container(
-                    height: MediaQuery.of(context).size.height * 0.7,
                     width: MediaQuery.of(context).size.width - 68,
+                    height: 200,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
-                      child: (_stepImages != null &&
-                              _stepImages!.isNotEmpty &&
-                              _currentStep < _stepImages!.length &&
-                              _stepImages![_currentStep] != null &&
-                              _stepImages![_currentStep]!.isNotEmpty)
-                          ? (_imageLoaded[_currentStep] == true
-                              ? AspectRatio(
-                                  aspectRatio: 16 / 9,
-                                  child: _stepImages![_currentStep]!.startsWith('http://') ||
-                                          _stepImages![_currentStep]!.startsWith('https://')
-                                      ? Image.network(
-                                          _stepImages![_currentStep]!,
-                                          fit: BoxFit.contain,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return const Center(child: CircularProgressIndicator());
-                                          },
-                                          errorBuilder: (context, error, stackTrace) {
-                                            print('Error loading step network image ${_stepImages![_currentStep]} (landscape): $error');
-                                            return Image.asset(
-                                              'assets/images/photo.png',
-                                              fit: BoxFit.contain,
-                                            );
-                                          },
-                                        )
-                                      : Image.asset(
-                                          _stepImages![_currentStep]!,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            print('Error loading step asset image ${_stepImages![_currentStep]} (landscape): $error');
-                                            return const Center(
-                                              child: Text(
-                                                '이미지를 로드할 수 없습니다.',
-                                                style: TextStyle(fontSize: 16),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                      child: _initialImagePath != null && _initialImagePath!.isNotEmpty
+                          ? (_initialImagePath!.startsWith('http://') || _initialImagePath!.startsWith('https://')
+                              ? Image.network(
+                                  _initialImagePath!,
+                                  fit: BoxFit.contain,
+                                  height: 200,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('Error loading initial network image $_initialImagePath (landscape): $error');
+                                    return Image.asset(
+                                      'assets/images/cabbagekimchi.png',
+                                      fit: BoxFit.contain,
+                                      height: 200,
+                                    );
+                                  },
                                 )
-                              : const Center(child: CircularProgressIndicator()))
-                          : const Text(
-                              '이미지가 없습니다',
-                              style: TextStyle(fontSize: 16),
+                              : Image.asset(
+                                  _initialImagePath!,
+                                  fit: BoxFit.contain,
+                                  height: 200,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('Error loading initial asset image $_initialImagePath (landscape): $error');
+                                    return const Center(
+                                      child: Text(
+                                        '이미지를 로드할 수 없습니다.',
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                    );
+                                  },
+                                ))
+                          : Image.asset(
+                              'assets/images/cabbagekimchi.png',
+                              fit: BoxFit.contain,
+                              height: 200,
                             ),
                     ),
                   ),
@@ -763,14 +567,133 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(
-                  onPressed: _currentStep == 0 ? null : _previousStep,
-                  icon: const Icon(Icons.arrow_back),
-                  color: _currentStep == 0 ? Colors.grey : Colors.black,
-                ),
                 const SizedBox(width: 10),
                 Container(
-                  width: MediaQuery.of(context).size.width * 0.6,
+                  width: 300,
+                  height: 50,
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _kimchiName ?? '김치',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: (_recipeSteps != null && _recipeSteps!.isNotEmpty) ? _startRecipe : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: const Text('Start Recipe'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecipeStepsPortrait() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final widthRatio = screenWidth / 1080;
+    final heightRatio = MediaQuery.of(context).size.height / 2400;
+
+    const double containerHeight = 300;
+    final containerWidth = screenWidth - 32.0;
+
+    const double recipeTextFontSize = 25;
+
+    const double recipeContainerWidth = 300;
+    const double recipeContainerHeight = 120;
+
+    print('Building recipe steps (portrait)...');
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              print('Navigating back to RecipePage from recipe steps...');
+              Navigator.pop(context);
+            },
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: containerWidth,
+                  height: containerHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: (_stepImages != null &&
+                            _stepImages!.isNotEmpty &&
+                            _currentStep < _stepImages!.length &&
+                            _stepImages![_currentStep] != null &&
+                            _stepImages![_currentStep]!.isNotEmpty)
+                        ? (_imageLoaded[_currentStep] == true
+                            ? _stepImages![_currentStep]!.startsWith('http://') ||
+                                    _stepImages![_currentStep]!.startsWith('https://')
+                                ? Image.network(
+                                    _stepImages![_currentStep]!,
+                                    fit: BoxFit.contain,
+                                    height: containerHeight,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(child: CircularProgressIndicator());
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading step network image ${_stepImages![_currentStep]}: $error');
+                                      return Image.asset(
+                                        'assets/images/photo.png',
+                                        fit: BoxFit.contain,
+                                        height: containerHeight,
+                                      );
+                                    },
+                                  )
+                                : Image.asset(
+                                    _stepImages![_currentStep]!,
+                                    fit: BoxFit.contain,
+                                    height: containerHeight,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading step asset image ${_stepImages![_currentStep]}: $error');
+                                      return const Center(
+                                        child: Text(
+                                          '이미지를 로드할 수 없습니다.',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                      );
+                                    },
+                                  )
+                            : const Center(child: CircularProgressIndicator()))
+                        : const Text(
+                            '이미지가 없습니다',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: recipeContainerWidth,
+                  height: recipeContainerHeight,
                   padding: const EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -779,72 +702,252 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                   ),
                   child: SingleChildScrollView(
                     controller: _scrollController,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: 50,
-                      ),
-                      child: (_recipeSteps != null &&
-                              _recipeSteps!.isNotEmpty &&
-                              _currentStep < _recipeSteps!.length)
-                          ? Text(
-                              '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
-                              style: const TextStyle(fontSize: 16),
-                              textAlign: TextAlign.center,
-                            )
-                          : const Text(
-                              '레시피 단계가 없습니다.',
-                              style: TextStyle(fontSize: 16),
-                              textAlign: TextAlign.center,
-                            ),
-                    ),
+                    child: (_recipeSteps != null &&
+                            _recipeSteps!.isNotEmpty &&
+                            _currentStep < _recipeSteps!.length)
+                        ? Text(
+                            '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
+                            style: TextStyle(fontSize: recipeTextFontSize),
+                            textAlign: TextAlign.center,
+                          )
+                        : const Text(
+                            '레시피 단계가 없습니다.',
+                            style: TextStyle(fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                IconButton(
-                  onPressed: (_recipeSteps != null &&
-                          _recipeSteps!.isNotEmpty &&
-                          _currentStep < _recipeSteps!.length - 1)
-                      ? _nextStep
-                      : null,
-                  icon: const Icon(Icons.arrow_forward),
-                  color: (_recipeSteps != null &&
-                          _recipeSteps!.isNotEmpty &&
-                          _currentStep < _recipeSteps!.length - 1)
-                      ? Colors.black
-                      : Colors.grey,
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _currentStep == 0 ? null : _previousStep,
+                      icon: const Icon(Icons.arrow_back),
+                      color: _currentStep == 0 ? Colors.grey : Colors.black,
+                    ),
+                    const SizedBox(width: 20),
+                    IconButton(
+                      onPressed: (_recipeSteps != null &&
+                              _recipeSteps!.isNotEmpty &&
+                              _currentStep < _recipeSteps!.length - 1)
+                          ? _nextStep
+                          : null,
+                      icon: const Icon(Icons.arrow_forward),
+                      color: (_recipeSteps != null &&
+                              _recipeSteps!.isNotEmpty &&
+                              _currentStep < _recipeSteps!.length - 1)
+                          ? Colors.black
+                          : Colors.grey,
+                    ),
+                  ],
                 ),
+                if (_recipeSteps != null &&
+                    _recipeSteps!.isNotEmpty &&
+                    _currentStep == _recipeSteps!.length - 1) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: 300 * widthRatio,
+                    child: ElevatedButton(
+                      onPressed: _captureRecipeImage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        '레시피 저장하기',
+                        style: TextStyle(
+                          fontSize: 36 * widthRatio,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-            if (_recipeSteps != null &&
-                _recipeSteps!.isNotEmpty &&
-                _currentStep == _recipeSteps!.length - 1) ...[
-              const SizedBox(height: 10),
-              Center(
-                child: SizedBox(
-                  width: 300 * widthRatio,
-                  child: ElevatedButton(
-                    onPressed: _captureRecipeImage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: EdgeInsets.symmetric(vertical: 10 * heightRatio),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      '레시피 저장하기',
-                      style: TextStyle(
-                        fontSize: 24 * widthRatio,
-                        color: Colors.white,
-                      ),
-                    ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecipeStepsLandscape() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final widthRatio = screenWidth / 1080;
+    final heightRatio = MediaQuery.of(context).size.height / 2400;
+
+    const double containerHeight = 200;
+    final containerWidth = screenWidth - 68;
+
+    const double recipeTextFontSize = 16;
+
+    const double recipeContainerWidth = 300;
+    const double recipeContainerHeight = 50;
+
+    print('Building recipe steps (landscape)...');
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  print('Navigating back to RecipePage from recipe steps (landscape)...');
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  width: containerWidth,
+                  height: containerHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: (_stepImages != null &&
+                            _stepImages!.isNotEmpty &&
+                            _currentStep < _stepImages!.length &&
+                            _stepImages![_currentStep] != null &&
+                            _stepImages![_currentStep]!.isNotEmpty)
+                        ? (_imageLoaded[_currentStep] == true
+                            ? _stepImages![_currentStep]!.startsWith('http://') ||
+                                    _stepImages![_currentStep]!.startsWith('https://')
+                                ? Image.network(
+                                    _stepImages![_currentStep]!,
+                                    fit: BoxFit.contain,
+                                    height: containerHeight,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(child: CircularProgressIndicator());
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading step network image ${_stepImages![_currentStep]} (landscape): $error');
+                                      return Image.asset(
+                                        'assets/images/photo.png',
+                                        fit: BoxFit.contain,
+                                        height: containerHeight,
+                                      );
+                                    },
+                                  )
+                                : Image.asset(
+                                    _stepImages![_currentStep]!,
+                                    fit: BoxFit.contain,
+                                    height: containerHeight,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading step asset image ${_stepImages![_currentStep]} (landscape): $error');
+                                      return const Center(
+                                        child: Text(
+                                          '이미지를 로드할 수 없습니다.',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                      );
+                                    },
+                                  )
+                            : const Center(child: CircularProgressIndicator()))
+                        : const Text(
+                            '이미지가 없습니다',
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(width: 58),
             ],
-          ],
-        ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _currentStep == 0 ? null : _previousStep,
+                      icon: const Icon(Icons.arrow_back),
+                      color: _currentStep == 0 ? Colors.grey : Colors.black,
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: recipeContainerWidth,
+                      height: recipeContainerHeight,
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        child: (_recipeSteps != null &&
+                                _recipeSteps!.isNotEmpty &&
+                                _currentStep < _recipeSteps!.length)
+                            ? Text(
+                                '${_currentStep + 1}. ${_recipeSteps![_currentStep]}',
+                                style: TextStyle(fontSize: recipeTextFontSize),
+                                textAlign: TextAlign.center,
+                              )
+                            : const Text(
+                                '레시피 단계가 없습니다.',
+                                style: TextStyle(fontSize: 16),
+                                textAlign: TextAlign.center,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      onPressed: (_recipeSteps != null &&
+                              _recipeSteps!.isNotEmpty &&
+                              _currentStep < _recipeSteps!.length - 1)
+                          ? _nextStep
+                          : null,
+                      icon: const Icon(Icons.arrow_forward),
+                      color: (_recipeSteps != null &&
+                              _recipeSteps!.isNotEmpty &&
+                              _currentStep < _recipeSteps!.length - 1)
+                          ? Colors.black
+                          : Colors.grey,
+                    ),
+                  ],
+                ),
+                if (_recipeSteps != null &&
+                    _recipeSteps!.isNotEmpty &&
+                    _currentStep == _recipeSteps!.length - 1) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: 300 * widthRatio,
+                    child: ElevatedButton(
+                      onPressed: _captureRecipeImage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(vertical: 10 * heightRatio),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        '레시피 저장하기',
+                        style: TextStyle(
+                          fontSize: 24 * widthRatio,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
