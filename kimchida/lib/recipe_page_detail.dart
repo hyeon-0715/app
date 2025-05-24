@@ -42,8 +42,9 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
   @override
   void initState() {
     super.initState();
-    // 가로/세로 모드 모두 허용하도록 초기 설정
     print('Initializing RecipePageDetail with all orientations allowed');
+
+    // 가로/세로 모드 모두 허용하도록 초기 설정
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -52,7 +53,9 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     ]).then((_) {
       // 방향 설정이 적용된 후 UI 갱신 보장
       if (mounted) {
-        setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {});
+        });
       }
     });
 
@@ -74,18 +77,21 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
         orElse: () => 'assets/images/photo.png',
       );
 
-      for (int i = 0; i < _recipeSteps!.length && i < _stepImages!.length; i++) {
-        _imageLoaded[i] = false;
-        _preloadImage(i);
-      }
+      print('Initialized _recipeSteps: $_recipeSteps');
+      print('Initialized _stepImages: $_stepImages');
+      print('Initialized _kimchiName: $_kimchiName');
+
+      // 빌드 완료 후 이미지 프리로딩 시작
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (int i = 0; i < _recipeSteps!.length && i < _stepImages!.length; i++) {
+          _imageLoaded[i] = false;
+          _preloadImage(i);
+        }
+      });
     } else {
       _recipeSteps = ['레시피 데이터를 불러오지 못했습니다.'];
       _stepImages = ['assets/images/photo.png'];
     }
-
-    print('Initialized _recipeSteps: $_recipeSteps');
-    print('Initialized _stepImages: $_stepImages');
-    print('Initialized _kimchiName: $_kimchiName');
   }
 
   @override
@@ -102,24 +108,36 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
 
   void _preloadImage(int step) async {
     if (_stepImages == null || step >= _stepImages!.length || _stepImages![step] == null || _stepImages![step]!.isEmpty) {
-      setState(() {
-        _imageLoaded[step] = true;
-      });
+      if (mounted) {
+        setState(() {
+          _imageLoaded[step] = true;
+        });
+      }
       return;
     }
 
     try {
       print('Preloading image for step $step: ${_stepImages![step]}');
-      final imageProvider = AssetImage(_stepImages![step]!);
-      await precacheImage(imageProvider, context);
-      setState(() {
-        _imageLoaded[step] = true;
-      });
+      // 네트워크 URL인지 확인
+      if (_stepImages![step]!.startsWith('http://') || _stepImages![step]!.startsWith('https://')) {
+        // 네트워크 이미지 프리로딩
+        await precacheImage(NetworkImage(_stepImages![step]!), context);
+      } else {
+        // 로컬 에셋 이미지 프리로딩
+        await precacheImage(AssetImage(_stepImages![step]!), context);
+      }
+      if (mounted) {
+        setState(() {
+          _imageLoaded[step] = true;
+        });
+      }
     } catch (e) {
       print('Error preloading image for step $step: $e');
-      setState(() {
-        _imageLoaded[step] = true;
-      });
+      if (mounted) {
+        setState(() {
+          _imageLoaded[step] = true;
+        });
+      }
     }
   }
 
@@ -174,9 +192,11 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _captureAndSaveImage();
-      setState(() {
-        _isCapturing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
+      }
     });
   }
 
@@ -285,16 +305,37 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                                             index < _stepImages!.length &&
                                             _stepImages![index] != null &&
                                             _stepImages![index]!.isNotEmpty
-                                        ? Image.asset(
-                                            _stepImages![index]!,
-                                            width: 300,
-                                            height: 200,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              print('Error loading capture image for step $index: $error');
-                                              return const Text('이미지 없음');
-                                            },
-                                          )
+                                        ? (_stepImages![index]!.startsWith('http://') ||
+                                                _stepImages![index]!.startsWith('https://')
+                                            ? Image.network(
+                                                _stepImages![index]!,
+                                                width: 300,
+                                                height: 200,
+                                                fit: BoxFit.contain,
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return const Center(child: CircularProgressIndicator());
+                                                },
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  print('Error loading capture network image for step $index: $error');
+                                                  return Image.asset(
+                                                    'assets/images/photo.png',
+                                                    width: 300,
+                                                    height: 200,
+                                                    fit: BoxFit.contain,
+                                                  );
+                                                },
+                                              )
+                                            : Image.asset(
+                                                _stepImages![index]!,
+                                                width: 300,
+                                                height: 200,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  print('Error loading capture asset image for step $index: $error');
+                                                  return const Text('이미지 없음');
+                                                },
+                                              ))
                                         : const Text('이미지 없음'),
                                   ],
                                 ),
@@ -390,8 +431,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              print('Navigating back to MainPage...');
-              Navigator.popUntil(context, (route) => route.isFirst);
+              print('Navigating back to RecipePage...');
+              Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
             },
           ),
           const SizedBox(height: 10),
@@ -409,20 +450,44 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Image.asset(
-                  _initialImagePath ?? 'assets/images/cabbagekimchi.png',
-                  width: MediaQuery.of(context).size.width,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading initial image $_initialImagePath: $error');
-                    return const Center(
-                      child: Text(
-                        '이미지를 로드할 수 없습니다.',
-                        style: TextStyle(fontSize: 16),
+                child: _initialImagePath != null && _initialImagePath!.isNotEmpty
+                    ? (_initialImagePath!.startsWith('http://') || _initialImagePath!.startsWith('https://')
+                        ? Image.network(
+                            _initialImagePath!,
+                            width: MediaQuery.of(context).size.width,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(child: CircularProgressIndicator());
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              print('Error loading initial network image $_initialImagePath: $error');
+                              return Image.asset(
+                                'assets/images/cabbagekimchi.png',
+                                width: MediaQuery.of(context).size.width,
+                                fit: BoxFit.contain,
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            _initialImagePath!,
+                            width: MediaQuery.of(context).size.width,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              print('Error loading initial asset image $_initialImagePath: $error');
+                              return const Center(
+                                child: Text(
+                                  '이미지를 로드할 수 없습니다.',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              );
+                            },
+                          ))
+                    : Image.asset(
+                        'assets/images/cabbagekimchi.png',
+                        width: MediaQuery.of(context).size.width,
+                        fit: BoxFit.contain,
                       ),
-                    );
-                  },
-                ),
               ),
             ),
           ),
@@ -449,6 +514,10 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
     final widthRatio = screenWidth / 1080;
     final heightRatio = MediaQuery.of(context).size.height / 2400;
 
+    // 이미지 컨테이너의 너비와 높이를 동일하게 설정
+    final containerWidth = screenWidth - 32.0; // 패딩(16.0 * 2)을 고려한 너비
+    final containerHeight = containerWidth; // 높이를 너비와 동일하게 설정
+
     print('Building recipe steps (portrait)...');
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -458,13 +527,14 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              print('Navigating back to MainPage from recipe steps...');
-              Navigator.popUntil(context, (route) => route.isFirst);
+              print('Navigating back to RecipePage from recipe steps...');
+              Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
             },
           ),
           const SizedBox(height: 10),
           Container(
-            height: 200,
+            width: containerWidth,
+            height: containerHeight, // 높이를 너비와 동일하게 설정
             decoration: BoxDecoration(
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(10),
@@ -478,24 +548,38 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                   ? (_imageLoaded[_currentStep] == true
                       ? AspectRatio(
                           aspectRatio: 16 / 9,
-                          child: Image.asset(
-                            _stepImages![_currentStep]!,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              print('Error loading step image ${_stepImages![_currentStep]}: $error');
-                              return const Center(
-                                child: Text(
-                                  '이미지를 로드할 수 없습니다.',
-                                  style: TextStyle(fontSize: 16),
+                          child: _stepImages![_currentStep]!.startsWith('http://') ||
+                                  _stepImages![_currentStep]!.startsWith('https://')
+                              ? Image.network(
+                                  _stepImages![_currentStep]!,
+                                  fit: BoxFit.contain,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('Error loading step network image ${_stepImages![_currentStep]}: $error');
+                                    return Image.asset(
+                                      'assets/images/photo.png',
+                                      fit: BoxFit.contain,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  _stepImages![_currentStep]!,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('Error loading step asset image ${_stepImages![_currentStep]}: $error');
+                                    return const Center(
+                                      child: Text(
+                                        '이미지를 로드할 수 없습니다.',
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
                         )
-                      : const Text(
-                          '이미지가 준비중입니다',
-                          style: TextStyle(fontSize: 16),
-                        ))
+                      : const Center(child: CircularProgressIndicator()))
                   : const Text(
                       '이미지가 없습니다',
                       style: TextStyle(fontSize: 16),
@@ -611,8 +695,8 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
-                    print('Navigating back to MainPage from recipe steps (landscape)...');
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    print('Navigating back to RecipePage from recipe steps (landscape)...');
+                    Navigator.pop(context); // 바로 이전 페이지(RecipePage)로 돌아감
                   },
                 ),
                 const SizedBox(width: 10),
@@ -633,24 +717,38 @@ class _RecipePageDetailState extends State<RecipePageDetail> {
                           ? (_imageLoaded[_currentStep] == true
                               ? AspectRatio(
                                   aspectRatio: 16 / 9,
-                                  child: Image.asset(
-                                    _stepImages![_currentStep]!,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      print('Error loading step image ${_stepImages![_currentStep]} (landscape): $error');
-                                      return const Center(
-                                        child: Text(
-                                          '이미지를 로드할 수 없습니다.',
-                                          style: TextStyle(fontSize: 16),
+                                  child: _stepImages![_currentStep]!.startsWith('http://') ||
+                                          _stepImages![_currentStep]!.startsWith('https://')
+                                      ? Image.network(
+                                          _stepImages![_currentStep]!,
+                                          fit: BoxFit.contain,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const Center(child: CircularProgressIndicator());
+                                          },
+                                          errorBuilder: (context, error, stackTrace) {
+                                            print('Error loading step network image ${_stepImages![_currentStep]} (landscape): $error');
+                                            return Image.asset(
+                                              'assets/images/photo.png',
+                                              fit: BoxFit.contain,
+                                            );
+                                          },
+                                        )
+                                      : Image.asset(
+                                          _stepImages![_currentStep]!,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            print('Error loading step asset image ${_stepImages![_currentStep]} (landscape): $error');
+                                            return const Center(
+                                              child: Text(
+                                                '이미지를 로드할 수 없습니다.',
+                                                style: TextStyle(fontSize: 16),
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      );
-                                    },
-                                  ),
                                 )
-                              : const Text(
-                                  '이미지가 준비중입니다',
-                                  style: TextStyle(fontSize: 16),
-                                ))
+                              : const Center(child: CircularProgressIndicator()))
                           : const Text(
                               '이미지가 없습니다',
                               style: TextStyle(fontSize: 16),

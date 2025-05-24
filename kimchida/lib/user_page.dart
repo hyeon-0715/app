@@ -106,7 +106,7 @@ class UserPage extends StatelessWidget {
                           'Kimchi App에 오신 것을 환영합니다!\n\n'
                           '이 앱은 다양한 김치 레시피를 탐색하고, 직접 레시피를 만들어 볼 수 있는 공간입니다.\n\n'
                           '- **레시피 탐색**: 다양한 김치 레시피를 확인하고 단계별로 따라할 수 있습니다.\n'
-                          '- **레시피 등록**: 사진 또는 텍스트로 나만의 레시피를 등록하고 만들어보실 수 있습니다..\n',
+                          '- **레시피 등록**: 사진 또는 텍스트로 나만의 레시피를 등록하고 만들어보실 수 있습니다.\n',
                           style: TextStyle(
                             fontSize: 40 * widthRatio,
                             color: Colors.black,
@@ -120,10 +120,10 @@ class UserPage extends StatelessWidget {
                             child: ElevatedButton(
                               onPressed: () {
                                 print('Navigating to MainPage from UserPage...');
-                                Navigator.pushAndRemoveUntil(
-                                  context,
+                                // 루트 내비게이터를 사용하여 모든 스택 제거하고 MainPage로 이동
+                                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                                   MaterialPageRoute(builder: (context) => const MainPage()),
-                                  (Route<dynamic> route) => route.isFirst,
+                                  (Route<dynamic> route) => false, // 모든 경로 제거
                                 );
                               },
                               style: ElevatedButton.styleFrom(

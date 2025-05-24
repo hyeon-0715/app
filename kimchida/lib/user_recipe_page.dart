@@ -13,8 +13,8 @@ import 'kimchi_recipe.dart';
 import '../utils/permission_helper.dart';
 
 // 유저가 새로운 김치 레시피를 등록하는 페이지
+// inputMode: 'photo' (사진 기반) 또는 'text' (텍스트 기반) 레시피 입력 모드
 class UserRecipePage extends StatefulWidget {
-  // 입력 모드 ('photo' 또는 'text')를 지정하여 사진 또는 텍스트로 레시피를 등록할지 결정
   final String inputMode;
 
   const UserRecipePage({super.key, required this.inputMode});
@@ -24,39 +24,25 @@ class UserRecipePage extends StatefulWidget {
 }
 
 class _UserRecipePageState extends State<UserRecipePage> {
-  // 사용자가 선택한 이미지 파일 리스트 (사진 모드에서 사용)
-  List<XFile> _selectedImages = [];
-  // 선택한 이미지의 세부 정보 (이름과 경로)를 저장하는 리스트
-  List<Map<String, String>> _imageDetails = [];
-  // 최대 허용 이미지 개수 상수
-  static const int _maxImageCount = 10;
-  // 텍스트 모드에서 제목 입력을 위한 컨트롤러
-  final TextEditingController _titleController = TextEditingController();
-  // 텍스트 모드에서 레시피 내용을 입력하기 위한 컨트롤러
-  final TextEditingController _contentController = TextEditingController();
-  // 제목 입력 필드의 포커스 상태를 관리하는 노드
-  final FocusNode _titleFocusNode = FocusNode();
-  // 내용 입력 필드의 포커스 상태를 관리하는 노드
-  final FocusNode _contentFocusNode = FocusNode();
-  // 제목 입력 필드의 힌트 텍스트 표시 여부를 관리
-  bool _showTitleHint = true;
-  // 내용 입력 필드의 힌트 텍스트 표시 여부를 관리
-  bool _showContentHint = true;
-  // 레시피 제출 중인지 상태를 관리 (중복 제출 방지)
-  bool isSubmitting = false;
-  // 제출 중 발생한 에러 메시지를 저장
-  String? errorMessage;
+  List<XFile> _selectedImages = []; // 선택된 이미지 파일 리스트
+  List<Map<String, String>> _imageDetails = []; // 이미지 메타데이터 (이름, 경로)
+  static const int _maxImageCount = 10; // 최대 이미지 첨부 개수
+  final TextEditingController _titleController = TextEditingController(); // 레시피 제목 입력 컨트롤러
+  final TextEditingController _contentController = TextEditingController(); // 레시피 내용 입력 컨트롤러
+  final FocusNode _titleFocusNode = FocusNode(); // 제목 입력 포커스 노드
+  final FocusNode _contentFocusNode = FocusNode(); // 내용 입력 포커스 노드
+  bool _showTitleHint = true; // 제목 힌트 텍스트 표시 여부
+  bool _showContentHint = true; // 내용 힌트 텍스트 표시 여부
+  bool isSubmitting = false; // 제출 진행 중 여부
+  String? errorMessage; // 에러 메시지
 
   @override
   void initState() {
     super.initState();
-    // 디버깅 로그: 페이지 초기화 확인
     print('UserRecipePage initState called, inputMode: ${widget.inputMode}');
-    // 텍스트 입력 모드일 경우 초기 설정
     if (widget.inputMode == 'text') {
       _titleController.text = '';
       _contentController.text = '';
-      // 제목 입력 필드 포커스 변경 시 힌트 표시 상태 업데이트
       _titleFocusNode.addListener(() {
         setState(() {
           if (!_titleFocusNode.hasFocus && _titleController.text.isEmpty) {
@@ -64,7 +50,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
           }
         });
       });
-      // 내용 입력 필드 포커스 변경 시 힌트 표시 상태 업데이트
       _contentFocusNode.addListener(() {
         setState(() {
           if (!_contentFocusNode.hasFocus && _contentController.text.isEmpty) {
@@ -78,7 +63,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 페이지가 다시 활성화될 때 isSubmitting 초기화
     if (isSubmitting) {
       setState(() {
         isSubmitting = false;
@@ -89,9 +73,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
 
   @override
   void dispose() {
-    // 디버깅 로그: 페이지 소멸 확인
     print('UserRecipePage dispose called');
-    // 리소스 해제: 텍스트 컨트롤러와 포커스 노드 정리
     _titleController.dispose();
     _contentController.dispose();
     _titleFocusNode.dispose();
@@ -108,7 +90,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
     final widthRatio = screenWidth / baseWidth;
     final heightRatio = screenHeight / baseHeight;
 
-    // 디버깅 로그: 다이얼로그 표시 확인
     print('Showing image source dialog...');
     showDialog(
       context: context,
@@ -133,7 +114,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 40 * heightRatio),
-              // 갤러리에서 이미지 선택 버튼
               SizedBox(
                 width: 300 * widthRatio,
                 child: ElevatedButton(
@@ -159,7 +139,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 ),
               ),
               SizedBox(height: 20 * heightRatio),
-              // 카메라로 사진 촬영 버튼
               SizedBox(
                 width: 300 * widthRatio,
                 child: ElevatedButton(
@@ -185,7 +164,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 ),
               ),
               SizedBox(height: 20 * heightRatio),
-              // 다이얼로그 취소 버튼
               SizedBox(
                 width: 300 * widthRatio,
                 child: OutlinedButton(
@@ -216,7 +194,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
     );
   }
 
-  // 이미지 선택을 위한 권한 확인 및 다이얼로그 표시
+  // 다중 이미지 선택 처리: 권한 확인 후 다이얼로그 표시
   void _handleMultiImageSelection() async {
     print('Handling multi image selection...');
     bool allPermissionsGranted = await PermissionHelper.checkPermissions();
@@ -232,7 +210,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
     }
   }
 
-  // 갤러리에서 여러 이미지를 선택하는 메서드
+  // 갤러리에서 다중 이미지 선택
   void _pickMultipleImages() async {
     try {
       print('Picking multiple images...');
@@ -241,7 +219,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
         setState(() {
           int remainingSlots = _maxImageCount - _selectedImages.length;
           if (images.length > remainingSlots) {
-            // 최대 이미지 개수 초과 시 경고 메시지 표시
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('최대 $_maxImageCount장까지 첨부 가능합니다.')),
             );
@@ -266,7 +243,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
         });
       }
     } catch (e) {
-      // 이미지 선택 중 오류 발생 시 처리
       print('Error picking multiple images: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -276,7 +252,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
     }
   }
 
-  // 카메라로 사진을 촬영하여 이미지를 선택하는 메서드
+  // 카메라로 이미지 촬영
   void _pickImageFromCamera() async {
     try {
       print('Picking image from camera...');
@@ -284,7 +260,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
       if (image != null) {
         setState(() {
           if (_selectedImages.length >= _maxImageCount) {
-            // 최대 이미지 개수 초과 시 경고 메시지 표시
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('최대 $_maxImageCount장까지 첨부 가능합니다.')),
             );
@@ -299,7 +274,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
         });
       }
     } catch (e) {
-      // 카메라 촬영 중 오류 발생 시 처리
       print('Error picking image from camera: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -309,7 +283,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
     }
   }
 
-  // 선택한 이미지를 제거하는 메서드
+  // 선택된 이미지 삭제
   void _removeImage(int index) {
     print('Removing image at index: $index');
     setState(() {
@@ -319,9 +293,8 @@ class _UserRecipePageState extends State<UserRecipePage> {
     });
   }
 
-  // 레시피 제출 처리 메서드
+  // 완료 버튼 클릭 시 레시피 제출 처리
   void _onComplete() async {
-    // 사진 모드에서 이미지 제출 처리
     if (widget.inputMode == 'photo' && _selectedImages.isNotEmpty) {
       print('Submitting photo recipe...');
       setState(() {
@@ -330,7 +303,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
       });
 
       try {
-        // 로딩 페이지로 이동 (이미지 데이터를 전달)
         List<Map<String, dynamic>> recipeData = [
           {'recipe_order': 1, 'recipe_detail': '사진 레시피가 제출되었습니다.'}
         ];
@@ -344,7 +316,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 recipeData: recipeData,
                 selectedImages: _selectedImages,
                 onReturn: () {
-                  // "돌아가기" 버튼을 눌렀을 때 호출
                   setState(() {
                     isSubmitting = false;
                     errorMessage = null;
@@ -355,7 +326,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
           );
         }
       } catch (e) {
-        // 제출 중 오류 발생 시 처리
         print('Error in _onComplete (photo): $e');
         setState(() {
           isSubmitting = false;
@@ -367,9 +337,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
           );
         }
       }
-    } 
-    // 텍스트 모드에서 레시피 제출 처리
-    else if (widget.inputMode == 'text' &&
+    } else if (widget.inputMode == 'text' &&
         _titleController.text.isNotEmpty &&
         _contentController.text.isNotEmpty) {
       print('Submitting text recipe...');
@@ -379,26 +347,22 @@ class _UserRecipePageState extends State<UserRecipePage> {
       });
 
       try {
-        // 사용자 입력 데이터를 기반으로 recipeData 생성 (김치 목록 형식)
         final stepsContent = _contentController.text.split('\n');
         List<Map<String, dynamic>> recipeData = [];
         List<Map<String, dynamic>> steps = [];
-        int kimchiNum = DateTime.now().millisecondsSinceEpoch; // 고유 번호 생성
+        int kimchiNum = DateTime.now().millisecondsSinceEpoch;
 
         for (int i = 0; i < stepsContent.length; i++) {
           String stepDetail = stepsContent[i].trim();
           if (stepDetail.isNotEmpty) {
-            // recipeData에서는 "숫자." 제거
             String cleanedStepDetail = stepDetail.replaceFirst(RegExp(r'^\d+\.\s*'), '').trim();
             recipeData.add({
               'kimchi_num': kimchiNum,
               'name': _titleController.text,
               'recipe_order': i + 1,
               'recipe_detail': cleanedStepDetail,
-              'recipe_image_serial_num': '', // 이미지는 서버에서 할당
+              'recipe_image_serial_num': '',
             });
-
-            // 서버 전송용 steps에서는 원본 데이터 유지
             steps.add({
               'recipe_order': i + 1,
               'recipe_detail': stepDetail,
@@ -409,45 +373,25 @@ class _UserRecipePageState extends State<UserRecipePage> {
         print('Processed recipeData (for display): $recipeData');
         print('Processed steps (for server): $steps');
 
-        // 서버로 텍스트 데이터 전송
-        final response = await _submitTextRecipe(steps);
-
-        if (response.statusCode == 200) {
-          // 서버 응답 파싱
-          final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-          // 서버 응답에서 'success' 필드 확인
-          if (responseData.containsKey('success')) {
-            print('서버 응답에서 성공적으로 저장됨: ${responseData['success']}');
-          } else {
-            throw Exception('서버 응답에서 success 필드가 누락되었습니다.');
-          }
-
-          if (mounted) {
-            // 로딩 페이지로 이동 (recipeData 전달)
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LoadingPage(
-                  inputMode: 'text',
-                  recipeData: recipeData,
-                  selectedImages: [],
-                  onReturn: () {
-                    // "돌아가기" 버튼을 눌렀을 때 호출
-                    setState(() {
-                      isSubmitting = false;
-                      errorMessage = null;
-                    });
-                  },
-                ),
+        if (mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TextProcessingPage(
+                title: _titleController.text,
+                steps: steps,
+                recipeData: recipeData,
+                onReturn: () {
+                  setState(() {
+                    isSubmitting = false;
+                    errorMessage = null;
+                  });
+                },
               ),
-            );
-          }
-        } else {
-          throw Exception('서버 응답 실패: ${response.statusCode}');
+            ),
+          );
         }
       } catch (e) {
-        // 제출 중 오류 발생 시 처리
         print('Error in _onComplete (text): $e');
         setState(() {
           isSubmitting = false;
@@ -462,30 +406,24 @@ class _UserRecipePageState extends State<UserRecipePage> {
     }
   }
 
-  // 사진 모드에서 서버로 이미지 데이터를 전송하는 메서드
+  // 사진 레시피를 서버에 제출
   Future<http.Response> _submitPhotoRecipe() async {
-    // 서버 엔드포인트 URL (가정)
     const String url = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/userRecipe/photo';
-
-    // MultipartRequest 생성
     var request = http.MultipartRequest('POST', Uri.parse(url));
 
-    // 이미지 파일 추가
     for (int i = 0; i < _selectedImages.length; i++) {
       final image = _selectedImages[i];
       final file = await http.MultipartFile.fromPath(
-        'images[$i]', // 서버에서 기대하는 필드 이름 (예: images[0], images[1], ...)
+        'images[$i]',
         image.path,
         filename: image.name,
       );
       request.files.add(file);
     }
 
-    // 추가 메타데이터 (필요 시)
     request.fields['recipe_type'] = 'photo';
     request.fields['timestamp'] = DateTime.now().toIso8601String();
 
-    // 요청 전송
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
@@ -495,22 +433,18 @@ class _UserRecipePageState extends State<UserRecipePage> {
     return response;
   }
 
-  // 텍스트 모드에서 서버로 텍스트 데이터를 전송하는 메서드
+  // 텍스트 레시피를 서버에 제출
   Future<http.Response> _submitTextRecipe(List<Map<String, dynamic>> steps) async {
-    // 서버 엔드포인트 URL (지정된 URL)
     const String url = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/MadeKimchi/';
-
-    // JSON 데이터 생성
     final data = {
       'recipe_type': 'text',
       'title': _titleController.text,
       'steps': steps,
-      'timestamp': "2025-05-18T01:21:00.000+09:00", // 고정된 timestamp 값
+      'timestamp': DateTime.now().toIso8601String(),
     };
 
     print('Sending text recipe to server: $data');
 
-    // POST 요청 전송
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
@@ -537,14 +471,12 @@ class _UserRecipePageState extends State<UserRecipePage> {
     final previewWidth = containerWidth * 0.4;
     final previewHeight = (400 * heightRatio) * 0.4;
 
-    // 전체 UI를 구성하는 스캐폴드
     return Scaffold(
-      resizeToAvoidBottomInset: true, // 키보드 표시 시 화면 크기 조정
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF5E9D6),
       body: SafeArea(
         child: Column(
           children: [
-            // 상단바: 앱의 상단에 고정된 네비게이션 바
             Container(
               width: screenWidth,
               height: 60 * heightRatio,
@@ -559,7 +491,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 ),
               ),
             ),
-            // 중단 섹션: 배경 이미지와 "User recipe" 텍스트 표시 영역
             Container(
               width: screenWidth,
               height: 600 * heightRatio,
@@ -605,7 +536,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                 ),
               ),
             ),
-            // 하단 섹션: 레시피 입력 및 제출 UI가 포함된 스크롤 가능한 영역
             Expanded(
               child: SingleChildScrollView(
                 child: Container(
@@ -614,7 +544,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 입력 모드 표시 ("사진" 또는 "텍스트")
                       Padding(
                         padding: EdgeInsets.only(
                           left: 60 * widthRatio,
@@ -650,7 +579,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 입력 안내 메시지
                               Text(
                                 widget.inputMode == 'photo'
                                     ? '사용하시고 싶으신 레시피 사진을 올려주세요'
@@ -680,7 +608,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                   child: widget.inputMode == 'photo'
                                       ? Stack(
                                           children: [
-                                            // 이미지가 선택되지 않았을 때 표시되는 추가 버튼
                                             if (_selectedImages.isEmpty)
                                               GestureDetector(
                                                 onTap: _handleMultiImageSelection,
@@ -692,7 +619,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                   ),
                                                 ),
                                               ),
-                                            // 선택된 이미지 미리보기
                                             if (_selectedImages.isNotEmpty) ...[
                                               ..._selectedImages.asMap().entries.map((entry) {
                                                 int index = entry.key;
@@ -729,7 +655,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                             },
                                                           ),
                                                         ),
-                                                        // 이미지 제거 버튼
                                                         Positioned(
                                                           top: 5,
                                                           right: 5,
@@ -754,7 +679,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                   ),
                                                 );
                                               }).toList().reversed.toList(),
-                                              // 추가 이미지 선택 버튼
                                               Positioned(
                                                 bottom: 5,
                                                 left: 5,
@@ -774,7 +698,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                   ),
                                                 ),
                                               ),
-                                              // 선택된 이미지 개수 표시
                                               Positioned(
                                                 bottom: 5,
                                                 right: 5,
@@ -784,7 +707,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                   decoration: BoxDecoration(
                                                     color: Colors.white,
                                                     border: Border.all(color: Colors.grey),
-                                                    borderRadius: BorderRadius.circular(5),
+                                                    borderRadius: BorderRadius.circular(10),
                                                   ),
                                                   child: Center(
                                                     child: Text(
@@ -804,7 +727,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                           padding: EdgeInsets.all(20 * widthRatio),
                                           child: Column(
                                             children: [
-                                              // 제목 입력 필드
                                               TextField(
                                                 controller: _titleController,
                                                 focusNode: _titleFocusNode,
@@ -832,7 +754,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                 },
                                               ),
                                               SizedBox(height: 20 * heightRatio),
-                                              // 내용 입력 필드 (멀티라인)
                                               Expanded(
                                                 child: SingleChildScrollView(
                                                   child: TextField(
@@ -859,6 +780,12 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                     ),
                                                     maxLines: null,
                                                     keyboardType: TextInputType.multiline,
+                                                    enableInteractiveSelection: true, // 선택 및 붙여넣기 활성화
+                                                    contextMenuBuilder: (context, editableTextState) {
+                                                      return AdaptiveTextSelectionToolbar.editableText(
+                                                        editableTextState: editableTextState,
+                                                      );
+                                                    },
                                                     onChanged: (value) {
                                                       setState(() {
                                                         _showContentHint = value.isEmpty;
@@ -873,7 +800,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                 ),
                               ),
                               SizedBox(height: 20 * heightRatio),
-                              // 에러 메시지 표시
                               if (errorMessage != null)
                                 Center(
                                   child: Text(
@@ -881,7 +807,6 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                     style: const TextStyle(color: Colors.red),
                                   ),
                                 ),
-                              // 제출 버튼
                               Center(
                                 child: SizedBox(
                                   width: 300 * widthRatio,
@@ -936,228 +861,129 @@ class _UserRecipePageState extends State<UserRecipePage> {
   }
 }
 
-// 레시피 제출 중 표시되는 로딩 페이지
-class LoadingPage extends StatefulWidget {
-  final String inputMode;
+// 텍스트 레시피 처리 페이지: 서버에 레시피 제출 및 처리 상태 표시
+class TextProcessingPage extends StatefulWidget {
+  final String title;
+  final List<Map<String, dynamic>> steps;
   final List<Map<String, dynamic>> recipeData;
-  final List<XFile> selectedImages;
-  final VoidCallback? onReturn; // "돌아가기" 버튼 콜백
+  final VoidCallback? onReturn;
 
-  const LoadingPage({
+  const TextProcessingPage({
     super.key,
-    required this.inputMode,
+    required this.title,
+    required this.steps,
     required this.recipeData,
-    required this.selectedImages,
     this.onReturn,
   });
 
   @override
-  _LoadingPageState createState() => _LoadingPageState();
+  _TextProcessingPageState createState() => _TextProcessingPageState();
 }
 
-class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin {
-  late AnimationController _controller;
-  bool _isLoadingImages = true;
-  String? _errorMessage;
-  Timer? _retryTimer;
+class _TextProcessingPageState extends State<TextProcessingPage> {
+  bool _isProcessing = true; // 서버 요청 처리 중 여부
+  String? _errorMessage; // 에러 메시지
 
   @override
   void initState() {
     super.initState();
-    // 디버깅 로그: 페이지 초기화 확인
-    print('LoadingPage initState called');
-    // 로딩 애니메이션 컨트롤러 초기화 (2초 주기로 회전)
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-
-    // 주기적으로 이미지 요청 시작
-    _startImageFetchRetry();
+    print('TextProcessingPage initState called');
+    // 텍스트 레시피 제출 시작
+    _submitTextRecipe();
   }
 
-  // 주기적으로 이미지 요청을 시도하는 메서드
-  void _startImageFetchRetry() {
-    _retryTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (!_isLoadingImages) {
-        timer.cancel();
-        return;
-      }
+  // 텍스트 레시피를 서버에 제출하고 응답 처리
+  Future<void> _submitTextRecipe() async {
+    try {
+      final response = await _sendRequestToServer();
+      print('Server response received: status=${response.statusCode}');
 
-      try {
-        final response = await _requestImagesFromServer();
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        print('Server response body parsed: $responseData');
 
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-          if (responseData.containsKey('success')) {
-            final List<dynamic> stepsWithImages = responseData['steps'];
-            List<Map<String, dynamic>> updatedRecipeData = [];
-
-            // recipeData와 서버 응답 데이터를 매핑
-            for (var recipeStep in widget.recipeData) {
-              var matchingStep = stepsWithImages.firstWhere(
-                (step) => step['recipe_order'] == recipeStep['recipe_order'],
-                orElse: () => null,
-              );
-
-              if (matchingStep != null) {
-                updatedRecipeData.add({
-                  'kimchi_num': recipeStep['kimchi_num'],
-                  'name': recipeStep['name'],
-                  'recipe_order': recipeStep['recipe_order'],
-                  'recipe_detail': recipeStep['recipe_detail'],
-                  'recipe_image_serial_num': matchingStep['recipe_image_serial_num'] ?? 'assets/images/photo.png',
-                });
-              } else {
-                updatedRecipeData.add({
-                  'kimchi_num': recipeStep['kimchi_num'],
-                  'name': recipeStep['name'],
-                  'recipe_order': recipeStep['recipe_order'],
-                  'recipe_detail': recipeStep['recipe_detail'],
-                  'recipe_image_serial_num': 'assets/images/photo.png',
-                });
-              }
+        if (responseData.containsKey('success') && responseData['success'] == '이미지 저장 완료') {
+          print('Server confirmed success: ${responseData['success']}');
+          if (mounted) {
+            // 서버 응답에서 result_data 추출
+            List<dynamic> resultData = responseData['body']['result_data'] ?? [];
+            if (resultData.isEmpty) {
+              throw Exception('서버 응답에서 result_data가 비어 있습니다.');
             }
 
-            // 모든 단계에 이미지가 할당되었는지 확인
-            bool allImagesAssigned = updatedRecipeData.every((step) => step['recipe_image_serial_num'] != '');
-
-            if (allImagesAssigned) {
-              // 모든 이미지가 할당되었으므로 로딩 완료 페이지로 이동
-              setState(() {
-                _isLoadingImages = false;
-              });
-              timer.cancel();
-              if (mounted) {
-                print('Moving to LoadingCompletePage with server images: $updatedRecipeData');
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LoadingCompletePage(recipeData: updatedRecipeData),
-                  ),
-                );
-              }
-            } else {
-              throw Exception('일부 단계에 이미지가 할당되지 않았습니다.');
-            }
-          } else {
-            throw Exception('서버 응답에서 success 필드가 누락되었습니다.');
+            // 성공 시 LoadingPage로 이동, resultData 전달
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoadingPage(
+                  inputMode: 'text',
+                  recipeData: widget.recipeData,
+                  selectedImages: [],
+                  serverResponseData: resultData,
+                  onReturn: widget.onReturn,
+                ),
+              ),
+            );
           }
         } else {
-          print('이미지 요청 실패 (재시도 중): ${response.statusCode}');
-          setState(() {
-            _errorMessage = '이미지를 생성 중입니다. 잠시만 기다려주세요.: ${response.statusCode}';
-          });
+          throw Exception('서버 응답에서 success 필드가 예상과 다릅니다: ${responseData['success']}');
         }
-      } catch (e) {
-        print('Error fetching images (재시도 중): $e');
-        setState(() {
-          _errorMessage = '이미지 로드 중 오류: $e (재시도 중)';
-        });
+      } else {
+        throw Exception('서버 응답 실패: 상태 코드 ${response.statusCode}');
       }
-    });
-  }
-
-  // "건너뛰기" 버튼 클릭 시 동작
-  void _skipLoading() {
-    // 타이머 중지
-    _retryTimer?.cancel();
-    setState(() {
-      _isLoadingImages = false;
-    });
-
-    // recipeData 복사 후 기본 이미지 설정
-    List<Map<String, dynamic>> updatedRecipeData = widget.recipeData.map((step) {
-      return {
-        'kimchi_num': step['kimchi_num'],
-        'name': step['name'],
-        'recipe_order': step['recipe_order'],
-        'recipe_detail': step['recipe_detail'],
-        'recipe_image_serial_num': 'assets/images/photo.png', // 기본 이미지 설정
-      };
-    }).toList();
-
-    // 로딩 완료 페이지로 이동
-    if (mounted) {
-      print('Skipping image loading, moving to LoadingCompletePage with default images: $updatedRecipeData');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LoadingCompletePage(recipeData: updatedRecipeData),
-        ),
-      );
+    } catch (e) {
+      print('Error during text recipe submission: $e');
+      setState(() {
+        _isProcessing = false;
+        // 사용자 친화적인 에러 메시지 설정
+        if (e.toString().contains('ClientException') && e.toString().contains('Connection closed')) {
+          _errorMessage = '서버에 연결할 수 없습니다. 네트워크를 확인하거나 나중에 다시 시도해주세요.';
+        } else if (e.toString().contains('TimeoutException')) {
+          _errorMessage = '서버 응답 시간이 초과되었습니다. 나중에 다시 시도해주세요.';
+        } else {
+          _errorMessage = '서버 통신 중 오류 발생: $e';
+        }
+      });
     }
   }
 
-  // 서버에 이미지 요청을 보내는 메서드 (가정)
-  Future<http.Response> _requestImagesFromServer() async {
-    const String url = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/MadeKimchi/images';
+  // 서버에 텍스트 레시피 요청 전송
+  Future<http.Response> _sendRequestToServer() async {
+    const String url = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/MadeKimchi/';
+    final data = {
+      'recipe_type': 'text',
+      'title': widget.title,
+      'steps': widget.steps,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
 
-    if (widget.inputMode == 'photo') {
-      // 사진 모드: Multipart 요청으로 이미지 전송
-      var request = http.MultipartRequest('POST', Uri.parse(url));
+    print('Preparing to send request to $url with data: $data');
 
-      // 이미지 파일 추가
-      for (int i = 0; i < widget.selectedImages.length; i++) {
-        final image = widget.selectedImages[i];
-        final file = await http.MultipartFile.fromPath(
-          'images[$i]',
-          image.path,
-          filename: image.name,
-        );
-        request.files.add(file);
-      }
-
-      request.fields['recipe_type'] = 'photo';
-      request.fields['timestamp'] = "2025-05-18T01:21:00.000+09:00";
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      print('Image request response status: ${response.statusCode}');
-      print('Image request response body: ${response.body}');
-
-      return response;
-    } else {
-      // 텍스트 모드: JSON 요청으로 steps 전송
-      final data = {
-        'recipe_type': 'text',
-        'steps': widget.recipeData.map((step) => {
-          'recipe_order': step['recipe_order'],
-          'recipe_detail': step['recipe_detail'],
-        }).toList(),
-        'timestamp': "2025-05-18T01:21:00.000+09:00",
-      };
-
-      print('Requesting images for text recipe: $data');
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data),
-      );
-
-      print('Image request response status: ${response.statusCode}');
-      print('Image request response body: ${response.body}');
+    // HTTP 클라이언트 생성 및 타임아웃 설정
+    final client = http.Client();
+    try {
+      final response = await client
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(data),
+          )
+          .timeout(
+            const Duration(seconds: 3000), // 3000초 타임아웃
+            onTimeout: () {
+              throw TimeoutException('서버 응답 시간이 초과되었습니다.');
+            },
+          );
 
       return response;
+    } finally {
+      client.close(); // 클라이언트 리소스 정리
     }
-  }
-
-  @override
-  void dispose() {
-    // 디버깅 로그: 페이지 소멸 확인
-    print('LoadingPage dispose called');
-    // 리소스 해제: 애니메이션 컨트롤러 및 타이머 정리
-    _controller.dispose();
-    _retryTimer?.cancel();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print('Building LoadingPage...');
+    print('Building TextProcessingPage...');
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     const double baseWidth = 1080;
@@ -1170,7 +996,6 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
       body: SafeArea(
         child: Column(
           children: [
-            // 상단바: 앱의 상단에 고정된 네비게이션 바
             Container(
               width: screenWidth,
               height: 60 * heightRatio,
@@ -1185,7 +1010,6 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
                 ),
               ),
             ),
-            // 중단 섹션: 배경 이미지와 "User recipe" 텍스트 표시 영역
             Container(
               width: screenWidth,
               height: 600 * heightRatio,
@@ -1231,7 +1055,403 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
                 ),
               ),
             ),
-            // 하단 섹션: 로딩 애니메이션과 메시지 표시
+            Expanded(
+              child: Container(
+                color: const Color(0xFFF5E9D6),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '이미지를 생성하고 있습니다. 잠시만 기다려주세요!',
+                        style: TextStyle(
+                          fontSize: 36 * widthRatio,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 20 * heightRatio),
+                      if (_isProcessing) const CircularProgressIndicator(),
+                      if (_errorMessage != null) ...[
+                        SizedBox(height: 20 * heightRatio),
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 24 * widthRatio,
+                            color: Colors.red,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      SizedBox(height: 20 * heightRatio),
+                      SizedBox(
+                        width: 300 * widthRatio,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            print('Returning from TextProcessingPage');
+                            widget.onReturn?.call();
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.green),
+                            padding: EdgeInsets.symmetric(vertical: 20 * heightRatio),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            '돌아가기',
+                            style: TextStyle(
+                              fontSize: 36 * widthRatio,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingPage extends StatefulWidget {
+  final String inputMode;
+  final List<Map<String, dynamic>> recipeData;
+  final List<XFile> selectedImages;
+  final List<dynamic>? serverResponseData; // 서버 응답 데이터 추가
+  final VoidCallback? onReturn;
+
+  const LoadingPage({
+    super.key,
+    required this.inputMode,
+    required this.recipeData,
+    required this.selectedImages,
+    this.serverResponseData,
+    this.onReturn,
+  });
+
+  @override
+  _LoadingPageState createState() => _LoadingPageState();
+}
+
+class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin {
+  late AnimationController _controller; // 로딩 애니메이션 컨트롤러
+  bool _isLoadingImages = true; // 이미지 로딩 진행 중 여부
+  String? _errorMessage; // 에러 메시지
+  Timer? _retryTimer; // 이미지 요청 재시도 타이머
+  bool _isMounted = true; // 비동기 작업 중 상태 추적
+
+  @override
+  void initState() {
+    super.initState();
+    print('LoadingPage initState called');
+    // 로딩 애니메이션 초기화
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+
+    // 빌드 완료 후 _fetchImages 호출
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchImages();
+    });
+  }
+
+  // 서버 응답 데이터를 사용하여 최종 이미지 URL을 생성하는 메서드
+  Future<void> _fetchImages() async {
+    try {
+      if (widget.inputMode == 'text') {
+        // TextProcessingPage에서 전달받은 서버 응답 데이터 사용
+        final List<dynamic> stepsWithImagePaths = widget.serverResponseData ?? [];
+        if (stepsWithImagePaths.isEmpty) {
+          throw Exception('서버 응답 데이터가 비어 있습니다.');
+        }
+        print('Steps with image paths received: $stepsWithImagePaths');
+
+        List<Map<String, dynamic>> updatedRecipeData = [];
+        const String baseImageUrl = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/findImage/';
+        print('Base Image API URL set in _fetchImages: $baseImageUrl'); // 기본 이미지 API 주소 로그
+
+        // 각 레시피 단계에 대해 서버에서 받은 imagepath를 사용하여 최종 이미지 URL을 생성
+        for (var recipeStep in widget.recipeData) {
+          var matchingStep = stepsWithImagePaths.firstWhere(
+            (step) => step['recipe_order'] == recipeStep['recipe_order'],
+            orElse: () => null,
+          );
+
+          if (matchingStep != null && matchingStep['recipe_image_path'] != null) {
+            // imagepath를 기본 URL에 붙여 최종 이미지 URL 생성
+            String imagePath = matchingStep['recipe_image_path'];
+            String fullImageUrl = baseImageUrl + imagePath.replaceFirst(RegExp(r'^/'), '');
+
+            updatedRecipeData.add({
+              'kimchi_num': matchingStep['kimchi_num'] ?? recipeStep['kimchi_num'],
+              'name': matchingStep['kimchi_name'] ?? recipeStep['name'],
+              'recipe_order': recipeStep['recipe_order'],
+              'recipe_detail': recipeStep['recipe_detail'],
+              'recipe_image_serial_num': fullImageUrl,
+            });
+            print('Step ${recipeStep['recipe_order']} image URL assigned: $fullImageUrl');
+          } else {
+            // imagepath가 없는 경우 기본 이미지 사용
+            updatedRecipeData.add({
+              'kimchi_num': recipeStep['kimchi_num'],
+              'name': recipeStep['name'],
+              'recipe_order': recipeStep['recipe_order'],
+              'recipe_detail': recipeStep['recipe_detail'],
+              'recipe_image_serial_num': 'assets/images/photo.png',
+            });
+            print('Step ${recipeStep['recipe_order']} assigned default image: assets/images/photo.png');
+          }
+        }
+
+        // 모든 단계에 이미지가 할당되었는지 확인
+        bool allImagesAssigned = updatedRecipeData.every((step) => step['recipe_image_serial_num'] != '');
+
+        if (allImagesAssigned) {
+          if (_isMounted) {
+            setState(() {
+              _isLoadingImages = false;
+            });
+            print('All images assigned. Moving to LoadingCompletePage with updated recipe data: $updatedRecipeData');
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoadingCompletePage(recipeData: updatedRecipeData),
+              ),
+            );
+          }
+        } else {
+          throw Exception('일부 단계에 이미지가 할당되지 않았습니다.');
+        }
+      } else {
+        // 사진 모드 처리 (현재 구현 유지)
+        final response = await _requestImagePathsFromServer();
+        print('Server response received: status=${response.statusCode}');
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+          print('Server response parsed: $responseData');
+
+          if (responseData.containsKey('success') && responseData['success']) {
+            final List<dynamic> stepsWithImagePaths = responseData['body']['result_data'] ?? [];
+            print('Steps with image paths received: $stepsWithImagePaths');
+
+            List<Map<String, dynamic>> updatedRecipeData = [];
+            const String baseImageUrl = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/findImage/';
+            print('Base Image API URL set in _fetchImages: $baseImageUrl');
+
+            for (var recipeStep in widget.recipeData) {
+              var matchingStep = stepsWithImagePaths.firstWhere(
+                (step) => step['recipe_order'] == recipeStep['recipe_order'],
+                orElse: () => null,
+              );
+
+              if (matchingStep != null && matchingStep['recipe_image_path'] != null) {
+                String imagePath = matchingStep['recipe_image_path'];
+                String fullImageUrl = baseImageUrl + imagePath.replaceFirst(RegExp(r'^/'), '');
+
+                updatedRecipeData.add({
+                  'kimchi_num': matchingStep['kimchi_num'] ?? recipeStep['kimchi_num'],
+                  'name': matchingStep['kimchi_name'] ?? recipeStep['name'],
+                  'recipe_order': recipeStep['recipe_order'],
+                  'recipe_detail': recipeStep['recipe_detail'],
+                  'recipe_image_serial_num': fullImageUrl,
+                });
+                print('Step ${recipeStep['recipe_order']} image URL assigned: $fullImageUrl');
+              } else {
+                updatedRecipeData.add({
+                  'kimchi_num': recipeStep['kimchi_num'],
+                  'name': recipeStep['name'],
+                  'recipe_order': recipeStep['recipe_order'],
+                  'recipe_detail': recipeStep['recipe_detail'],
+                  'recipe_image_serial_num': 'assets/images/photo.png',
+                });
+                print('Step ${recipeStep['recipe_order']} assigned default image: assets/images/photo.png');
+              }
+            }
+
+            bool allImagesAssigned = updatedRecipeData.every((step) => step['recipe_image_serial_num'] != '');
+
+            if (allImagesAssigned) {
+              if (_isMounted) {
+                setState(() {
+                  _isLoadingImages = false;
+                });
+                print('All images assigned. Moving to LoadingCompletePage with updated recipe data: $updatedRecipeData');
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoadingCompletePage(recipeData: updatedRecipeData),
+                  ),
+                );
+              }
+            } else {
+              throw Exception('일부 단계에 이미지가 할당되지 않았습니다.');
+            }
+          } else {
+            throw Exception('서버 응답에서 success 필드가 예상과 다릅니다: ${responseData['success']}');
+          }
+        } else {
+          throw Exception('이미지 경로 요청 실패: 상태 코드 ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      print('Error fetching image paths: $e');
+      if (_isMounted) {
+        setState(() {
+          _isLoadingImages = false;
+          _errorMessage = '이미지 로드 중 오류가 발생했습니다: $e';
+        });
+      }
+    }
+  }
+
+  // "건너뛰기" 버튼 클릭 시 동작
+  void _skipLoading() {
+    _retryTimer?.cancel();
+    setState(() {
+      _isLoadingImages = false;
+    });
+
+    // 모든 레시피 단계에 기본 이미지를 설정
+    List<Map<String, dynamic>> updatedRecipeData = widget.recipeData.map((step) {
+      return {
+        'kimchi_num': step['kimchi_num'],
+        'name': step['name'],
+        'recipe_order': step['recipe_order'],
+        'recipe_detail': step['recipe_detail'],
+        'recipe_image_serial_num': 'assets/images/photo.png',
+      };
+    }).toList();
+
+    if (mounted) {
+      print('Skipping image loading, moving to LoadingCompletePage with default images: $updatedRecipeData');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LoadingCompletePage(recipeData: updatedRecipeData),
+        ),
+      );
+    }
+  }
+
+  // 사진 모드에서만 호출되는 메서드 (현재는 사용되지 않으므로 최소 구현)
+  Future<http.Response> _requestImagePathsFromServer() async {
+    const String url = 'http://ec2-47-130-90-43.ap-southeast-1.compute.amazonaws.com:8080/MadeKimchi/images';
+    print('Image API URL for requesting paths in _requestImagePathsFromServer: $url');
+
+    var request = http.MultipartRequest('POST', Uri.parse(url));
+    for (int i = 0; i < widget.selectedImages.length; i++) {
+      final image = widget.selectedImages[i];
+      final file = await http.MultipartFile.fromPath(
+        'images[$i]',
+        image.path,
+        filename: image.name,
+      );
+      request.files.add(file);
+      print('Adding image to request: ${image.name}, path: ${image.path}');
+    }
+    request.fields['recipe_type'] = 'photo';
+    request.fields['timestamp'] = DateTime.now().toIso8601String();
+    print('Photo mode request fields: ${request.fields}');
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    print('Photo mode response status: ${response.statusCode}');
+    print('Photo mode response body: ${response.body}');
+    return response;
+  }
+
+  @override
+  void dispose() {
+    print('LoadingPage dispose called');
+    _isMounted = false;
+    _controller.dispose();
+    _retryTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('Building LoadingPage...');
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    const double baseWidth = 1080;
+    const double baseHeight = 2400;
+    final widthRatio = screenWidth / baseWidth;
+    final heightRatio = screenHeight / baseHeight;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5E9D6),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: screenWidth,
+              height: 60 * heightRatio,
+              color: Colors.grey[800],
+              child: Center(
+                child: Text(
+                  'ㅁ',
+                  style: TextStyle(
+                    fontSize: 24 * widthRatio,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: screenWidth,
+              height: 600 * heightRatio,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/kimchiback.png'),
+                  fit: BoxFit.cover,
+                  opacity: 0.5,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color.fromARGB(255, 255, 243, 223),
+                    Color.fromARGB(255, 189, 180, 165),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 60 * widthRatio,
+                  top: 60 * heightRatio,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'User recipe',
+                      style: TextStyle(
+                        fontSize: 90 * widthRatio,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.white,
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Expanded(
               child: Container(
                 color: const Color(0xFFF5E9D6),
@@ -1248,7 +1468,6 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
                         ),
                       ),
                       SizedBox(height: 20 * heightRatio),
-                      // 회전하는 기어 아이콘 애니메이션
                       RotationTransition(
                         turns: _controller,
                         child: Image.asset(
@@ -1272,12 +1491,11 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
                         ),
                       ],
                       SizedBox(height: 20 * heightRatio),
-                      // 돌아가기 버튼
                       SizedBox(
                         width: 300 * widthRatio,
                         child: OutlinedButton(
                           onPressed: () {
-                            widget.onReturn?.call(); // 콜백 호출
+                            widget.onReturn?.call();
                             Navigator.pop(context);
                           },
                           style: OutlinedButton.styleFrom(
@@ -1297,7 +1515,6 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
                         ),
                       ),
                       SizedBox(height: 10 * heightRatio),
-                      // 건너뛰기 버튼
                       SizedBox(
                         width: 300 * widthRatio,
                         child: OutlinedButton(
@@ -1330,7 +1547,6 @@ class _LoadingPageState extends State<LoadingPage> with TickerProviderStateMixin
   }
 }
 
-// 레시피 제출 완료 후 결과를 표시하는 페이지
 class LoadingCompletePage extends StatelessWidget {
   final List<Map<String, dynamic>> recipeData;
 
@@ -1339,6 +1555,11 @@ class LoadingCompletePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('Building LoadingCompletePage...');
+    // recipeData의 이미지 URL 로그 출력
+    for (var step in recipeData) {
+      print('LoadingCompletePage - Step ${step['recipe_order']}: image URL=${step['recipe_image_serial_num']}');
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     const double baseWidth = 1080;
@@ -1351,7 +1572,6 @@ class LoadingCompletePage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단바: 앱의 상단에 고정된 네비게이션 바
             Container(
               width: screenWidth,
               height: 60 * heightRatio,
@@ -1366,7 +1586,6 @@ class LoadingCompletePage extends StatelessWidget {
                 ),
               ),
             ),
-            // 중단 섹션: 배경 이미지와 "User recipe" 텍스트 표시 영역
             Container(
               width: screenWidth,
               height: 600 * heightRatio,
@@ -1412,7 +1631,6 @@ class LoadingCompletePage extends StatelessWidget {
                 ),
               ),
             ),
-            // 하단 섹션: 제출 완료 메시지와 버튼 표시
             Expanded(
               child: Container(
                 color: const Color(0xFFF5E9D6),
@@ -1429,12 +1647,15 @@ class LoadingCompletePage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 20 * heightRatio),
-                      // 레시피 확인 버튼
                       SizedBox(
                         width: 300 * widthRatio,
                         child: ElevatedButton(
                           onPressed: () {
                             print('Navigating to RecipePageDetail from LoadingCompletePage...');
+                            // recipeData를 그대로 전달하며, 이미지 URL 로그 출력
+                            for (var step in recipeData) {
+                              print('Navigating to RecipePageDetail - Step ${step['recipe_order']}: image URL=${step['recipe_image_serial_num']}');
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1462,16 +1683,16 @@ class LoadingCompletePage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 20 * heightRatio),
-                      // 메인페이지로 돌아가기 버튼
                       SizedBox(
                         width: 300 * widthRatio,
                         child: OutlinedButton(
                           onPressed: () {
                             print('Navigating to MainPage from LoadingCompletePage...');
+                            // 모든 이전 스택 제거하고 MainPage로 이동
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (context) => const MainPage()),
-                              (Route<dynamic> route) => route.isFirst,
+                              (Route<dynamic> route) => false, // 모든 경로 제거
                             );
                           },
                           style: OutlinedButton.styleFrom(
