@@ -466,53 +466,53 @@ class _MenuSectionState extends State<MenuSection> {
                           color: Colors.black,
                         ),
                       ),
-                      SizedBox(height: portraitSpacing * heightRatio),
-                      IconButton(
-                        onPressed: () {
-                          print('Navigating to UserRecipePage (photo)...');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const UserRecipePage(inputMode: 'photo'),
-                            ),
-                          );
-                        },
-                        visualDensity: VisualDensity(
-                          horizontal: -4,
-                          vertical: -4,
-                        ),
-                        icon: Container(
-                          width: portraitButtonWidth * widthRatio,
-                          height: portraitButtonHeight * heightRatio,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5E9D6),
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 8,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/images/photo.png',
-                              width: portraitImageWidth * widthRatio,
-                              height: portraitImageHeight * heightRatio,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                print('Error loading photo.png: $error');
-                                return const Text(
-                                  '이미지를 로드할 수 없습니다.',
-                                  style: TextStyle(color: Colors.red),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
+                      // SizedBox(height: portraitSpacing * heightRatio),
+                      // IconButton(
+                      //   onPressed: () {
+                      //     print('Navigating to UserRecipePage (photo)...');
+                      //     Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //         builder: (context) => const UserRecipePage(inputMode: 'photo'),
+                      //       ),
+                      //     );
+                      //   },
+                      //   visualDensity: VisualDensity(
+                      //     horizontal: -4,
+                      //     vertical: -4,
+                      //   ),
+                      //   icon: Container(
+                      //     width: portraitButtonWidth * widthRatio,
+                      //     height: portraitButtonHeight * heightRatio,
+                      //     decoration: BoxDecoration(
+                      //       color: const Color(0xFFF5E9D6),
+                      //       border: Border.all(color: Colors.grey),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //       boxShadow: const [
+                      //         BoxShadow(
+                      //           color: Colors.black26,
+                      //           blurRadius: 8,
+                      //           offset: Offset(2, 2),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //     child: Center(
+                      //       child: Image.asset(
+                      //         'assets/images/photo.png',
+                      //         width: portraitImageWidth * widthRatio,
+                      //         height: portraitImageHeight * heightRatio,
+                      //         fit: BoxFit.contain,
+                      //         errorBuilder: (context, error, stackTrace) {
+                      //           print('Error loading photo.png: $error');
+                      //           return const Text(
+                      //             '이미지를 로드할 수 없습니다.',
+                      //             style: TextStyle(color: Colors.red),
+                      //           );
+                      //         },
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
                       SizedBox(height: portraitSpacing * heightRatio),
                       IconButton(
                         onPressed: () {
@@ -530,7 +530,7 @@ class _MenuSectionState extends State<MenuSection> {
                         ),
                         icon: Container(
                           width: portraitButtonWidth * widthRatio,
-                          height: portraitButtonHeight * heightRatio,
+                          height: 220,
                           decoration: BoxDecoration(
                             color: const Color(0xFFF5E9D6),
                             border: Border.all(color: Colors.grey),
@@ -674,55 +674,55 @@ class _MenuSectionState extends State<MenuSection> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: IconButton(
-                                onPressed: () {
-                                  print('Navigating to UserRecipePage (photo)...');
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const UserRecipePage(inputMode: 'photo'),
-                                    ),
-                                  );
-                                },
-                                visualDensity: VisualDensity(
-                                  horizontal: -4,
-                                  vertical: -4,
-                                ),
-                                icon: Container(
-                                  width: landscapeButtonWidth * widthRatio,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF5E9D6),
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black26,
-                                        blurRadius: 8,
-                                        offset: Offset(2, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Image.asset(
-                                      'assets/images/photo.png',
-                                      width: 80,
-                                      height: 80,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        print('Error loading photo.png: $error');
-                                        return const Text(
-                                          '이미지를 로드할 수 없습니다.',
-                                          style: TextStyle(color: Colors.red),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: landscapeSpacing * widthRatio),
+                            // Expanded(
+                            //   // child: IconButton(
+                            //   //   onPressed: () {
+                            //   //     print('Navigating to UserRecipePage (photo)...');
+                            //   //     Navigator.push(
+                            //   //       context,
+                            //   //       MaterialPageRoute(
+                            //   //         builder: (context) => const UserRecipePage(inputMode: 'photo'),
+                            //   //       ),
+                            //   //     );
+                            //   //   },
+                            //   //   visualDensity: VisualDensity(
+                            //   //     horizontal: -4,
+                            //   //     vertical: -4,
+                            //   //   ),
+                            //   //   icon: Container(
+                            //   //     width: landscapeButtonWidth * widthRatio,
+                            //   //     height: 120,
+                            //   //     decoration: BoxDecoration(
+                            //   //       color: const Color(0xFFF5E9D6),
+                            //   //       border: Border.all(color: Colors.grey),
+                            //   //       borderRadius: BorderRadius.circular(10),
+                            //   //       boxShadow: const [
+                            //   //         BoxShadow(
+                            //   //           color: Colors.black26,
+                            //   //           blurRadius: 8,
+                            //   //           offset: Offset(2, 2),
+                            //   //         ),
+                            //   //       ],
+                            //   //     ),
+                            //   //     child: Center(
+                            //   //       child: Image.asset(
+                            //   //         'assets/images/photo.png',
+                            //   //         width: 80,
+                            //   //         height: 80,
+                            //   //         fit: BoxFit.contain,
+                            //   //         errorBuilder: (context, error, stackTrace) {
+                            //   //           print('Error loading photo.png: $error');
+                            //   //           return const Text(
+                            //   //             '이미지를 로드할 수 없습니다.',
+                            //   //             style: TextStyle(color: Colors.red),
+                            //   //           );
+                            //   //         },
+                            //   //       ),
+                            //   //     ),
+                            //   //   ),
+                            //   // ),
+                            // ),
+                            SizedBox(width: 0),
                             Expanded(
                               child: IconButton(
                                 onPressed: () {
