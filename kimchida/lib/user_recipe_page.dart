@@ -783,7 +783,7 @@ class _UserRecipePageState extends State<UserRecipePage> {
                                                         focusNode: _contentFocusNode,
                                                         decoration: InputDecoration(
                                                           hintText: _showContentHint
-                                                              ? '1. 겉절이 채소는 양상추, 치커리, 샐러드채소를 준비하여 물에 씻어 먹기 좋은 크기로 썬다.\n2. 당근 양념을 만든다...'
+                                                              ? '1. 겉절이 채소는 양상추, 치커리, 샐러드채소를 준비하여 물에 씻는다.\n2. 먹기 좋은 크기로 썬다.\n3. 당근 양념을 만든다...'
                                                               : null,
                                                           hintStyle: TextStyle(
                                                             color: Colors.grey[400],
